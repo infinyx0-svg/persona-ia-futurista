@@ -61,7 +61,7 @@ export function AnimeAvatar({ character, emotion, outfit, size = 260, speaking =
   const eye = character.eyeColor;
   const skin = character.skinTone;
   const top = outfit?.top ?? '#4C8DFF';
-  const bottom = outfit?.bottom ?? '#1B2438';
+  const bottom = outfit?.bottom ?? '#2B2233';
 
   const eyeOpen = blink ? 0.08 : Math.max(0.25, face.eye);
   const browY = 96 - face.brow * 5;

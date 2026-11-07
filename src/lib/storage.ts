@@ -42,7 +42,7 @@ export function emptyData(user: UserProfile | null = null): AppData {
     emotion: {
       key: 'curiosa',
       intensity: 0.4,
-      cause: 'Primer dia',
+      cause: 'Primer día',
       updatedAt: now,
     },
     wardrobe: { outfits: [], currentOutfitId: '', pendingProposalId: null, lastChangeAt: now },
@@ -98,7 +98,7 @@ export async function clearSession(): Promise<void> {
   await AsyncStorage.removeItem(sessionKey);
 }
 
-// ---- Almacen local de credenciales (modo sin Supabase) ----
+// ---- Almacén local de credenciales (modo sin Supabase) ----
 export interface LocalUserRecord {
   id: string;
   email: string;
@@ -108,8 +108,8 @@ export interface LocalUserRecord {
 }
 
 function simpleHash(input: string): string {
-  // Hash determinista ligero (FNV-1a de 64 bits en hex). No es criptografico:
-  // el modo local es para desarrollo/pruebas; produccion usa Supabase Auth.
+  // Hash determinista ligero (FNV-1a de 64 bits en hex). No es criptográfico:
+  // el modo local es para desarrollo/pruebas; producción usa Supabase Auth.
   let h1 = 0x811c9dc5;
   let h2 = 0x01000193;
   for (let i = 0; i < input.length; i++) {
