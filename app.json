@@ -1,0 +1,38 @@
+{
+  "expo": {
+    "name": "Persona IA",
+    "slug": "persona-ia",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "personaia",
+    "userInterfaceStyle": "dark",
+    "newArchEnabled": true,
+    "backgroundColor": "#05070F",
+    "assetBundlePatterns": ["**/*"],
+    "android": {
+      "package": "com.personaia.app",
+      "versionCode": 1,
+      "edgeToEdgeEnabled": true,
+      "permissions": ["RECORD_AUDIO", "MODIFY_AUDIO_SETTINGS"],
+      "adaptiveIcon": {
+        "backgroundColor": "#05070F"
+      }
+    },
+    "ios": {
+      "bundleIdentifier": "com.personaia.app",
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSMicrophoneUsageDescription": "Persona IA usa el microfono para que puedas hablar con tu companera en el modo En persona."
+      }
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "single"
+    },
+    "plugins": [],
+    "extra": {
+      "supabaseUrl": "",
+      "supabaseAnonKey": ""
+    }
+  }
+}
