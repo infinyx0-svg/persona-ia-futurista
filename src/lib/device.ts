@@ -21,7 +21,7 @@ export async function diagnoseDevice(): Promise<DeviceReport> {
         ? 'descargando'
         : 'desconocido';
   } catch {
-    notes.push('No se pudo leer la bateria en este dispositivo.');
+    notes.push('No se pudo leer la batería en este dispositivo.');
   }
 
   const totalMemory = Device.totalMemory ?? 0;
@@ -40,11 +40,11 @@ export async function diagnoseDevice(): Promise<DeviceReport> {
 
   if (batteryLevel !== null && batteryLevel < 20 && batteryState === 'descargando') {
     recommended = 'ligero';
-    notes.push('Bateria baja: el modo ligero ahorra energia.');
+    notes.push('Batería baja: el modo ligero ahorra energía.');
   }
 
-  if (Platform.OS === 'android') notes.push('Android detectado: voz del sistema disponible via expo-speech.');
-  if (Platform.OS === 'ios') notes.push('iOS detectado: misma base de codigo, sin cambios.');
+  if (Platform.OS === 'android') notes.push('Android detectado: voz del sistema disponible vía expo-speech.');
+  if (Platform.OS === 'ios') notes.push('iOS detectado: misma base de código, sin cambios.');
   if (Platform.OS === 'web') notes.push('Navegador: la voz depende del motor del navegador.');
 
   return {
