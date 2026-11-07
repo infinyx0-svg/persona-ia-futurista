@@ -7,7 +7,7 @@
     "scheme": "personaia",
     "userInterfaceStyle": "dark",
     "newArchEnabled": true,
-    "backgroundColor": "#05070F",
+    "backgroundColor": "#0E0B16",
     "assetBundlePatterns": ["**/*"],
     "android": {
       "package": "com.personaia.app",
@@ -15,14 +15,14 @@
       "edgeToEdgeEnabled": true,
       "permissions": ["RECORD_AUDIO", "MODIFY_AUDIO_SETTINGS"],
       "adaptiveIcon": {
-        "backgroundColor": "#05070F"
+        "backgroundColor": "#0E0B16"
       }
     },
     "ios": {
       "bundleIdentifier": "com.personaia.app",
       "supportsTablet": true,
       "infoPlist": {
-        "NSMicrophoneUsageDescription": "Persona IA usa el microfono para que puedas hablar con tu companera en el modo En persona."
+        "NSMicrophoneUsageDescription": "Persona IA usa el micrófono para que puedas hablar con tu compañera en el modo En persona."
       }
     },
     "web": {
