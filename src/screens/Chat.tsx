@@ -280,7 +280,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing(1.5),
     lineHeight: 18,
   },
-  timeText: { color: palette.textFaint, fontSize: 10, marginTop: 3, marginHorizontal: 4 },
+  timeText: { color: palette.textFaint, fontSize: 10.5, marginTop: 3, marginHorizontal: 4 },
   systemText: { color: palette.textFaint, fontSize: 11.5, fontStyle: 'italic' },
   typingWrap: { alignItems: 'flex-start', marginBottom: spacing(2) },
   typingBubble: {
