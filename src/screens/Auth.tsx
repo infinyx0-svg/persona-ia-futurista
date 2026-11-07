@@ -3,7 +3,7 @@ import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useApp } from '../state/AppContext';
 import { Button, Card, Field, Screen, Sub, Title } from '../components/UI';
-import { glow, palette, radius, spacing } from '../theme';
+import { palette, radius, spacing } from '../theme';
 
 export function WelcomeScreen() {
   const { go, authMode } = useApp();
@@ -51,7 +51,8 @@ export function SignUpScreen() {
       Alert.alert('Contraseñas distintas', 'Las dos contraseñas deben coincidir.');
       return;
     }
-    await signUp(email, pass);
+    const ok = await signUp(email, pass);
+    if (!ok) return;
   };
 
   return (
@@ -141,7 +142,6 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     marginBottom: spacing(6),
     alignSelf: 'flex-start',
-    ...glow('#4C8DFF', 26),
   },
   orbInner: { flex: 1 },
   cardTitle: { color: palette.text, fontWeight: '700', fontSize: 15, marginBottom: spacing(2) },

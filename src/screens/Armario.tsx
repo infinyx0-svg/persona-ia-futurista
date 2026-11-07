@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useApp } from '../state/AppContext';
 import { Badge, Button, Card, Chip, Divider, Label, Row, Screen, Sub, Title } from '../components/UI';
 import { palette, radius, spacing } from '../theme';
@@ -211,7 +211,7 @@ const styles = StyleSheet.create({
   input: {
     backgroundColor: 'rgba(5,7,15,0.72)',
     borderWidth: 1,
-    borderColor: 'rgba(120,160,255,0.22)',
+    borderColor: palette.border,
     borderRadius: radius.md,
     paddingHorizontal: spacing(3.5),
     paddingVertical: spacing(3),
