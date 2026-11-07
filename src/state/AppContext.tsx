@@ -2,6 +2,7 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useR
 import {
   AppData,
   AuthUser,
+  Character,
   ChatMessage,
   DeviceReport,
   EmotionState,
@@ -11,21 +12,28 @@ import {
   PerfMode,
   Settings,
   UserProfile,
+  WorldState,
 } from '../types';
 import { authModeLabel, restoreSession, signIn as authSignIn, signOut as authSignOut, signUp as authSignUp } from '../lib/auth';
 import { clearData, emptyData, loadData, saveData } from '../lib/storage';
-import { buildCharacter, CreateCharacterInput } from '../engine/personality';
+import { buildCharacter, CreateCharacterInput, emptyTraits } from '../engine/personality';
 import { analyze, buildMessage, firstMeetingOpening, generateReply, GeneratedReply } from '../engine/dialogue';
 import { generateLlmReply, llmEnabled, resolveLlmConfig, testConnection } from '../engine/llm';
 import { nextEmotion, timeContext } from '../engine/emotion';
 import { extractMemories, mergeMemories } from '../engine/memory';
 import { applyDelta, breakUp, canBecomePartner, confirmPartner } from '../engine/relationship';
-import { addOutfit, initialWardrobe, proposeOutfit, removeOutfit, wearOutfit } from '../engine/wardrobe';
+import { addOutfit, evaluateProposal, initialWardrobe, proposeOutfit, removeOutfit, wearOutfit } from '../engine/wardrobe';
 import { createWorld, PlaceOption, suggestPlaces } from '../engine/world';
 import { materializeSecondary, proposeSecondary, SecondaryProposal, secondaryReply } from '../engine/secondary';
 import { diagnoseDevice } from '../lib/device';
 
-export type Route = 'boot' | 'welcome' | 'signup' | 'login' | 'onboarding' | 'main';
+export type Route =
+  | 'boot'
+  | 'welcome'
+  | 'signup'
+  | 'login'
+  | 'onboarding'
+  | 'main';
 
 export type Tab = 'chat' | 'persona' | 'mente' | 'gente' | 'armario' | 'ajustes';
 
@@ -40,17 +48,21 @@ interface AppContextValue {
   busy: boolean;
   error: string | null;
   clearError: () => void;
+  // auth
   signUp: (email: string, password: string) => Promise<boolean>;
   signIn: (email: string, password: string) => Promise<boolean>;
   signOut: () => Promise<void>;
   go: (r: Route) => void;
+  // onboarding
   saveUserProfile: (p: UserProfile) => Promise<void>;
   createCompanion: (input: CreateCharacterInput) => Promise<void>;
   placeOptions: () => PlaceOption[];
   choosePlace: (p: PlaceOption) => Promise<void>;
+  // chat
   sendMessage: (text: string) => Promise<void>;
   sendSticker: (emoji: string) => Promise<void>;
   typing: boolean;
+  // llm
   streamingText: string;
   llmError: string | null;
   llmActive: boolean;
@@ -58,22 +70,28 @@ interface AppContextValue {
   retryLast: () => Promise<void>;
   testLlm: () => Promise<{ ok: boolean; message: string }>;
   updateLlm: (patch: Partial<LlmSettings>) => Promise<void>;
+  // persona
   setEmotion: (e: EmotionState) => void;
+  // memory
   addMemory: (text: string, kind?: MemoryItem['kind']) => Promise<void>;
   updateMemory: (id: string, text: string) => Promise<void>;
   deleteMemory: (id: string) => Promise<void>;
+  // relationship
   becomePartner: () => Promise<void>;
   endRelationship: (reason: string) => Promise<void>;
+  // wardrobe
   wear: (id: string) => Promise<void>;
   addNewOutfit: (o: Omit<Outfit, 'id'>) => Promise<void>;
   remove: (id: string) => Promise<void>;
   propose: () => Promise<Outfit | null>;
   acceptProposal: () => Promise<void>;
   rejectProposal: () => Promise<void>;
+  // secondary
   proposeNewSecondary: () => SecondaryProposal | null;
   acceptSecondary: (p: SecondaryProposal) => Promise<void>;
   sendSecondaryMessage: (characterId: string, text: string) => Promise<void>;
   removeSecondary: (id: string) => Promise<void>;
+  // settings
   updateSettings: (patch: Partial<Settings>) => Promise<void>;
   runDiagnosis: () => Promise<DeviceReport>;
   applyRecommendedMode: () => Promise<void>;
@@ -105,15 +123,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const dataRef = useRef<AppData>(data);
   dataRef.current = data;
 
-  const persist = useCallback(
-    async (next: AppData, uid?: string) => {
-      setData(next);
-      dataRef.current = next;
-      const id = uid ?? user?.id;
-      if (id) await saveData(id, next);
-    },
-    [user?.id],
-  );
+  const persist = useCallback(async (next: AppData, uid?: string) => {
+    setData(next);
+    dataRef.current = next;
+    const id = uid ?? user?.id;
+    if (id) await saveData(id, next);
+  }, [user?.id]);
 
   // ---- arranque ----
   useEffect(() => {
