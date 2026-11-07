@@ -52,26 +52,53 @@ npx expo start --web
 
 ### Generar un APK instalable (Android)
 
+Hay **tres vías** para obtener el APK:
+
+**Vía 1 — Descargar el APK ya compilado (más rápido)**
+El APK de release firmado se publica como *release* de GitHub. Ve a
+**Releases** del repositorio y descarga `persona-ia-v1.0.0.apk` (o el nombre de la
+versión). Instálalo en el teléfono (ver "Instalar el APK" abajo).
+
+**Vía 2 — GitHub Actions (automático, sin instalar nada)**
+El repositorio incluye `.github/workflows/build-apk.yml`, que compila el APK en
+la nube y lo publica como artefacto/release:
+1. En GitHub, abre la pestaña **Actions** → **Build APK**.
+2. Pulsa **Run workflow** (rama `main`).
+3. Al terminar, descarga el artefacto `persona-ia-apk` o, si disparaste con un
+   tag `v*`, el APK queda en la **Release** correspondiente.
+
+**Vía 3 — Build local (EAS o Gradle)**
+
+Con EAS Build (recomendado, sin instalar Android Studio):
 ```bash
 npm install -g eas-cli
 eas login
 eas build -p android --profile preview
 ```
+EAS entrega un enlace de descarga del `.apk`.
 
-Al terminar, EAS entrega un enlace de descarga del `.apk`. Instálalo en el teléfono
-(requiere permitir "instalar apps de origen desconocido").
-
-Alternativa local, sin cuenta EAS:
-
+Build local con Gradle (necesitas **JDK 17** y **Android SDK**):
 ```bash
 npx expo prebuild --platform android
 cd android && ./gradlew assembleRelease
-# APK en android/app/build/outputs/apk/release/app-release.apk
+# APK firmado en android/app/build/outputs/apk/release/app-release.apk
 ```
+El proyecto ya incluye el keystore de release (`keystore/release.keystore`) y la
+configuración de firma en `android/gradle.properties` y `android/app/build.gradle`,
+así que `assembleRelease` produce un APK **firmado e instalable** directamente.
 
-> Para compilar localmente necesitas **JDK 17** y **Android SDK** (Android Studio).
-> El sandbox donde se generó este proyecto no los tiene, por eso la verificación
-> aquí fue: `tsc` sin errores + Metro empaquetando + recorrido funcional en navegador.
+### Instalar el APK en el teléfono
+
+1. Copia el `.apk` al teléfono (por USB, Google Drive, WhatsApp o el navegador).
+2. Toca el archivo. Android pedirá permitir **"instalar apps de origen desconocido"**;
+   actívalo para el navegador/app que uses.
+3. Confirma la instalación. La app **Persona IA** aparece en el cajón de apps.
+4. Abre la app. Si aparece el aviso de Play Protect "app desconocida", pulsa
+   **"Instalar de todos modos"** (es un APK firmado por el proyecto, no de Play).
+
+> El APK firmado con el keystore del proyecto se instala sin problemas. Si algún
+> día cambias el keystore, habrá que desinstalar la versión anterior antes de
+> instalar la nueva (firma distinta).
 
 ---
 
