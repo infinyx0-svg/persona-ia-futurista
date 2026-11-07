@@ -20,7 +20,7 @@ export const palette = {
   // texto
   text: '#F2F6FF',
   textDim: '#C3CFE8',
-  textFaint: '#93A3C4',
+  textFaint: '#A6B4D2',
 
   // acentos LED
   accent: '#4C8DFF', // azul electrico

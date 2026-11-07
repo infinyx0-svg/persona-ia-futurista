@@ -49,7 +49,7 @@ export async function diagnoseDevice(): Promise<DeviceReport> {
 
   return {
     platform: Platform.OS,
-    osVersion: String(Device.osVersion ?? Platform.Version ?? '-'),
+    osVersion: String(Device.osVersion ?? Platform.Version ?? '—'),
     model: Device.modelName ?? 'Dispositivo desconocido',
     totalMemory,
     freeDisk: 0,
@@ -63,7 +63,7 @@ export async function diagnoseDevice(): Promise<DeviceReport> {
 }
 
 export function formatBytes(bytes: number): string {
-  if (!bytes) return '-';
+  if (!bytes) return '—';
   const gb = bytes / (1024 * 1024 * 1024);
   if (gb >= 1) return `${gb.toFixed(1)} GB`;
   return `${Math.round(bytes / (1024 * 1024))} MB`;
