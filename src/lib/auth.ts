@@ -51,23 +51,23 @@ function normalizeEmail(email: string) {
 
 function validate(email: string, password: string): string | null {
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(normalizeEmail(email))) {
-    return 'Escribe un correo valido.';
+    return 'Escribe un correo válido.';
   }
-  if (password.length < 6) return 'La contrasena debe tener al menos 6 caracteres.';
+  if (password.length < 6) return 'La contraseña debe tener al menos 6 caracteres.';
   return null;
 }
 
 // ---------------- Supabase ----------------
 async function sbSignUp(email: string, password: string): Promise<AuthResult> {
   const sb = getSupabase();
-  if (!sb) return { user: null, error: 'Supabase no esta configurado.' };
+  if (!sb) return { user: null, error: 'Supabase no está configurado.' };
   const { data, error } = await sb.auth.signUp({ email: normalizeEmail(email), password });
   if (error) return { user: null, error: translate(error.message) };
   if (!data.user) return { user: null, error: 'No se pudo crear la cuenta.' };
   if (!data.session) {
     return {
       user: null,
-      error: 'Cuenta creada. Revisa tu correo para confirmarla y luego inicia sesion.',
+      error: 'Cuenta creada. Revisa tu correo para confirmarla y luego inicia sesión.',
     };
   }
   return { user: { id: data.user.id, email: data.user.email ?? email, provider: 'supabase' }, error: null };
@@ -75,7 +75,7 @@ async function sbSignUp(email: string, password: string): Promise<AuthResult> {
 
 async function sbSignIn(email: string, password: string): Promise<AuthResult> {
   const sb = getSupabase();
-  if (!sb) return { user: null, error: 'Supabase no esta configurado.' };
+  if (!sb) return { user: null, error: 'Supabase no está configurado.' };
   const { data, error } = await sb.auth.signInWithPassword({
     email: normalizeEmail(email),
     password,
@@ -87,13 +87,13 @@ async function sbSignIn(email: string, password: string): Promise<AuthResult> {
 
 function translate(msg: string): string {
   const m = msg.toLowerCase();
-  if (m.includes('invalid login')) return 'Correo o contrasena incorrectos.';
+  if (m.includes('invalid login')) return 'Correo o contraseña incorrectos.';
   if (m.includes('already registered') || m.includes('already exists'))
-    return 'Ese correo ya tiene una cuenta. Inicia sesion.';
-  if (m.includes('email not confirmed')) return 'Confirma tu correo antes de iniciar sesion.';
-  if (m.includes('password')) return 'La contrasena no cumple los requisitos minimos.';
+    return 'Ese correo ya tiene una cuenta. Inicia sesión.';
+  if (m.includes('email not confirmed')) return 'Confirma tu correo antes de iniciar sesión.';
+  if (m.includes('password')) return 'La contraseña no cumple los requisitos mínimos.';
   if (m.includes('rate limit')) return 'Demasiados intentos. Espera un momento.';
-  if (m.includes('network') || m.includes('fetch')) return 'Sin conexion con el servidor.';
+  if (m.includes('network') || m.includes('fetch')) return 'Sin conexión con el servidor.';
   return msg;
 }
 
@@ -102,7 +102,7 @@ async function localSignUp(email: string, password: string): Promise<AuthResult>
   const users = await readLocalUsers();
   const mail = normalizeEmail(email);
   if (users.some((u) => u.email === mail)) {
-    return { user: null, error: 'Ese correo ya tiene una cuenta. Inicia sesion.' };
+    return { user: null, error: 'Ese correo ya tiene una cuenta. Inicia sesión.' };
   }
   const salt = makeSalt();
   const record: LocalUserRecord = {
@@ -124,14 +124,14 @@ async function localSignIn(email: string, password: string): Promise<AuthResult>
   const found = users.find((u) => u.email === mail);
   if (!found) return { user: null, error: 'No existe una cuenta con ese correo.' };
   if (found.hash !== hashPassword(password, found.salt)) {
-    return { user: null, error: 'Correo o contrasena incorrectos.' };
+    return { user: null, error: 'Correo o contraseña incorrectos.' };
   }
   const user: AuthUser = { id: found.id, email: found.email, provider: 'local' };
   await saveSession(user);
   return { user, error: null };
 }
 
-// ---------------- API publica ----------------
+// ---------------- API pública ----------------
 export async function signUp(email: string, password: string): Promise<AuthResult> {
   const invalid = validate(email, password);
   if (invalid) return { user: null, error: invalid };
