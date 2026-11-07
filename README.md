@@ -52,22 +52,28 @@ npx expo start --web
 
 ### Generar un APK instalable (Android)
 
-Hay **tres vías** para obtener el APK:
+> **Estado del APK:** el APK se compila con **GitHub Actions** (Vía 1), que es la
+> vía recomendada y ya está configurada en el repositorio. El build local (Vía 2)
+> funciona en una máquina normal, pero **no cabe en el sandbox donde se generó
+> este proyecto** (2 GB de RAM y 4 GB de disco: el NDK de Android solo ya ocupa
+> ~2 GB y el build de release necesita más memoria de la disponible). Por eso la
+> compilación se delega a la nube de GitHub, que es gratis para repositorios
+> públicos.
 
-**Vía 1 — Descargar el APK ya compilado (más rápido)**
-El APK de release firmado se publica como *release* de GitHub. Ve a
-**Releases** del repositorio y descarga `persona-ia-v1.0.0.apk` (o el nombre de la
-versión). Instálalo en el teléfono (ver "Instalar el APK" abajo).
+Hay **dos vías** para obtener el APK:
 
-**Vía 2 — GitHub Actions (automático, sin instalar nada)**
+**Vía 1 — GitHub Actions (recomendado, automático, sin instalar nada)**
 El repositorio incluye `.github/workflows/build-apk.yml`, que compila el APK en
-la nube y lo publica como artefacto/release:
+la nube de GitHub y lo publica como **Release descargable**:
 1. En GitHub, abre la pestaña **Actions** → **Build APK**.
 2. Pulsa **Run workflow** (rama `main`).
-3. Al terminar, descarga el artefacto `persona-ia-apk` o, si disparaste con un
-   tag `v*`, el APK queda en la **Release** correspondiente.
+3. Al terminar (~10 min), el APK queda en la pestaña **Releases** del repositorio
+   (tag `apk-latest`) y también como artefacto `persona-ia-apk` en la ejecución.
+4. Descarga el `.apk` desde la Release y sigue "Instalar el APK" abajo.
 
-**Vía 3 — Build local (EAS o Gradle)**
+También puedes dispararlo creando un tag: `git tag v1.0.0 && git push origin v1.0.0`.
+
+**Vía 2 — Build local (EAS o Gradle)**
 
 Con EAS Build (recomendado, sin instalar Android Studio):
 ```bash
@@ -77,15 +83,20 @@ eas build -p android --profile preview
 ```
 EAS entrega un enlace de descarga del `.apk`.
 
-Build local con Gradle (necesitas **JDK 17** y **Android SDK**):
+Build local con Gradle (necesitas **JDK 17** y **Android SDK** con NDK 27.1):
 ```bash
-npx expo prebuild --platform android
+npx expo prebuild --clean --platform android
 cd android && ./gradlew assembleRelease
 # APK firmado en android/app/build/outputs/apk/release/app-release.apk
 ```
 El proyecto ya incluye el keystore de release (`keystore/release.keystore`) y la
 configuración de firma en `android/gradle.properties` y `android/app/build.gradle`,
 así que `assembleRelease` produce un APK **firmado e instalable** directamente.
+
+> **Requisitos del build local:** JDK 17, Android SDK (platform 36, build-tools 36,
+> NDK 27.1.12297006) y al menos **8 GB de RAM y 15 GB de disco libres**. El build de
+> release de React Native con la nueva arquitectura compila C++ y consume bastante;
+> en una máquina de desarrollo normal tarda unos 10–15 minutos.
 
 ### Instalar el APK en el teléfono
 
