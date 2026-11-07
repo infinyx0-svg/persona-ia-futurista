@@ -17,16 +17,16 @@ import { glow, palette, spacing } from './src/theme';
 import { Tab } from './src/state/AppContext';
 
 const TABS: { key: Tab; label: string; icon: string }[] = [
-  { key: 'chat', label: 'Telefono', icon: '\u{1F4AC}' },
-  { key: 'persona', label: 'En persona', icon: '\u{1F399}' },
-  { key: 'mente', label: 'Mente', icon: '\u{1F9E0}' },
-  { key: 'gente', label: 'Gente', icon: '\u{1F465}' },
-  { key: 'armario', label: 'Armario', icon: '\u{1F457}' },
-  { key: 'ajustes', label: 'Ajustes', icon: '\u2699' },
+  { key: 'chat', label: 'Teléfono', icon: '💬' },
+  { key: 'persona', label: 'En persona', icon: '🎙️' },
+  { key: 'mente', label: 'Mente', icon: '🧠' },
+  { key: 'gente', label: 'Gente', icon: '👥' },
+  { key: 'armario', label: 'Armario', icon: '👗' },
+  { key: 'ajustes', label: 'Ajustes', icon: '⚙️' },
 ];
 
 function TabBar() {
-  const { tab, setTab } = useApp();
+  const { tab, setTab, data } = useApp();
   const insets = useSafeAreaInsets();
   return (
     <View style={[styles.tabBar, { paddingBottom: Math.max(insets.bottom, spacing(2)) }]}>
@@ -59,7 +59,7 @@ function TabBar() {
 }
 
 function MainShell() {
-  const { tab } = useApp();
+  const { tab, data } = useApp();
   return (
     <View style={{ flex: 1, backgroundColor: palette.bg }}>
       <View style={{ flex: 1 }}>

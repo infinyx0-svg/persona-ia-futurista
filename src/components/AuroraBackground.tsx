@@ -5,25 +5,25 @@ import { led, themes, ThemeName } from '../theme';
 import { PerfMode } from '../types';
 
 /**
- * Fondo futurista: base azul-noche con luces LED azul/purpura/cian en
+ * Fondo futurista: base azul-noche con luces LED azul/púrpura/cian en
  * movimiento lento.
  *
- * Rendimiento y bateria:
- *  - Solo se animan `transform` y `opacity`, asi que todo corre en el hilo
+ * Rendimiento y batería:
+ *  - Solo se animan `transform` y `opacity`, así que todo corre en el hilo
  *    nativo (useNativeDriver) y no provoca re-renders de React.
- *  - Los bucles son largos (19-26 s) y con easing suave: el movimiento se
+ *  - Los bucles son largos (14-26 s) y con easing suave: el movimiento se
  *    percibe sin repintar la pantalla a 60 fps de contenido.
- *  - `perfMode` reduce la cantidad de luces: 'ligero' deja el fondo estatico,
- *    'equilibrado' usa 3 haces, 'completo' anade orbes y un haz extra.
+ *  - `perfMode` reduce la cantidad de luces: 'ligero' deja el fondo estático,
+ *    'equilibrado' usa 3 haces, 'completo' añade orbes y un haz extra.
  *  - Al pasar la app a segundo plano se detienen todas las animaciones.
  */
 
 type Beam = {
   color: string;
-  width: number;
-  height: number;
-  top: number;
-  left: number;
+  width: number; // fracción del ancho de pantalla
+  height: number; // fracción del alto
+  top: number; // fracción del alto
+  left: number; // fracción del ancho
   rotate: string;
   opacity: number;
   duration: number;
@@ -247,7 +247,7 @@ export function AuroraBackground({
   const t = themes[theme] ?? themes.noche;
   const [active, setActive] = React.useState(true);
 
-  // Detener animaciones en segundo plano: ahorra bateria de verdad.
+  // Detener animaciones en segundo plano: ahorra batería de verdad.
   useEffect(() => {
     const sub = AppState.addEventListener('change', (s) => setActive(s === 'active'));
     return () => sub.remove();
@@ -279,7 +279,11 @@ export function AuroraBackground({
 
       {/* Velo de contraste: garantiza legibilidad del texto sobre las luces. */}
       <LinearGradient
-        colors={['rgba(5,7,15,0.55)', 'rgba(5,7,15,0.30)', 'rgba(5,7,15,0.62)']}
+        colors={[
+          'rgba(5,7,15,0.55)',
+          'rgba(5,7,15,0.30)',
+          'rgba(5,7,15,0.62)',
+        ]}
         locations={[0, 0.45, 1]}
         style={StyleSheet.absoluteFill}
       />
