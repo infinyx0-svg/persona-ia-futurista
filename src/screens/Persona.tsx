@@ -16,8 +16,9 @@ import { useApp } from '../state/AppContext';
 import { palette, radius, spacing } from '../theme';
 import { AnimeAvatar } from '../components/AnimeAvatar';
 import { AuroraBackground } from '../components/AuroraBackground';
-import { EMOTION_LABELS, emotionColor, timeContext, routineFor } from '../engine/emotion';
+import { EMOTION_LABELS, emotionColor, timeContext } from '../engine/emotion';
 import { currentOutfit } from '../engine/wardrobe';
+import { routineFor } from '../engine/emotion';
 
 export function PersonaScreen() {
   const { data, sendMessage, typing, setTab } = useApp();
@@ -239,7 +240,7 @@ const styles = StyleSheet.create({
   infoBlock: { alignItems: 'center', marginBottom: spacing(3) },
   name: { color: palette.text, fontSize: 24, fontWeight: '800', marginBottom: spacing(1) },
   dot: { width: 6, height: 6, borderRadius: 3, marginRight: 6 },
-  state: { color: palette.textFaint, fontSize: 12.5 },
+  state: { color: palette.textDim, fontSize: 12.5 },
   subtitleBox: {
     marginHorizontal: spacing(6),
     marginBottom: spacing(3),
