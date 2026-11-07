@@ -1,27 +1,30 @@
 name: Build APK
 
-# Compila el APK de release de Persona IA y lo publica como release descargable.
-# Se dispara manualmente (workflow_dispatch) o al crear un tag v*.
+# Compila el APK instalable de Persona IA y lo publica como Release descargable.
+# Se puede lanzar a mano (pestana Actions -> Build APK -> Run workflow)
+# o automaticamente al crear un tag v*.
 on:
   workflow_dispatch:
   push:
     tags:
       - 'v*'
 
+permissions:
+  contents: write
+
 jobs:
   build:
-    name: Compilar APK de release
+    name: Compilar APK
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
-      - name: Checkout
+      - name: Descargar el codigo
         uses: actions/checkout@v4
 
-      - name: Configurar Node.js
+      - name: Configurar Node.js 20
         uses: actions/setup-node@v4
         with:
-          node-version: 20
-          cache: npm
+          node-version: '20'
 
       - name: Configurar JDK 17
         uses: actions/setup-java@v4
@@ -33,38 +36,48 @@ jobs:
         uses: android-actions/setup-android@v3
 
       - name: Instalar dependencias
-        run: npm ci
+        run: npm install --no-audit --no-fund
 
-      - name: Typecheck
+      - name: Comprobar tipos
         run: npx tsc --noEmit
 
       - name: Generar proyecto Android nativo
-        run: npx expo prebuild -p android --no-install
-
-      - name: Generar keystore de release
-        run: |
-          mkdir -p keystore
-          keytool -genkeypair -v \
-            -keystore keystore/release.keystore \
-            -alias personaia -keyalg RSA -keysize 2048 -validity 10000 \
-            -storepass personaia123 -keypass personaia123 \
-            -dname "CN=Persona IA, OU=Dev, O=PersonaIA, L=La Paz, S=La Paz, C=BO"
+        run: npx expo prebuild --clean -p android --no-install
 
       - name: Compilar APK de release
         run: |
           cd android
-          ./gradlew assembleRelease --no-daemon
+          chmod +x gradlew
+          ./gradlew assembleRelease --no-daemon --stacktrace
+
+      - name: Renombrar APK
+        run: |
+          mkdir -p dist
+          cp android/app/build/outputs/apk/release/*.apk "dist/persona-ia-${GITHUB_REF_NAME}.apk"
+          ls -lh dist/
 
       - name: Subir APK como artefacto
         uses: actions/upload-artifact@v4
         with:
           name: persona-ia-apk
-          path: android/app/build/outputs/apk/release/*.apk
+          path: dist/*.apk
           if-no-files-found: error
 
-      - name: Publicar release
-        if: startsWith(github.ref, 'refs/tags/')
+      - name: Publicar Release con el APK
         uses: softprops/action-gh-release@v2
         with:
-          files: android/app/build/outputs/apk/release/*.apk
-          generate_release_notes: true
+          tag_name: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || 'apk-latest' }}
+          name: Persona IA - APK ${{ github.ref_name }}
+          body: |
+            APK instalable de **Persona IA**.
+
+            - Version de la app: 1.0.0 (versionCode 1)
+            - Paquete: com.personaia.app
+            - Arquitecturas: arm64-v8a, armeabi-v7a
+            - Firmado con la keystore de debug de Expo (instalable por sideload, no apto para Play Store)
+
+            Instalacion: descarga el .apk, activa "Instalar apps de origen desconocido"
+            y abre el archivo en el telefono.
+          files: dist/*.apk
+          draft: false
+          prerelease: false
