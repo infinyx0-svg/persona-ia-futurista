@@ -14,7 +14,6 @@ import { useApp } from '../state/AppContext';
 import { Badge, Button, Card, Empty, Label, Row, Screen, Sub, Title } from '../components/UI';
 import { palette, radius, spacing } from '../theme';
 import { AnimeAvatar } from '../components/AnimeAvatar';
-import { AuroraBackground } from '../components/AuroraBackground';
 import { SecondaryProposal } from '../engine/secondary';
 
 export function SecundariosScreen() {
@@ -42,7 +41,6 @@ export function SecundariosScreen() {
     const msgs = messagesFor(character.id);
     return (
       <View style={styles.fill}>
-        <AuroraBackground theme={data.settings.theme} perfMode={data.settings.perfMode} />
         <View style={styles.chatHeader}>
           <Pressable onPress={() => setOpenChat(null)}>
             <Text style={{ color: palette.textDim, fontSize: 14 }}>←</Text>
@@ -213,8 +211,7 @@ const styles = StyleSheet.create({
     paddingTop: Platform.OS === 'ios' ? spacing(14) : spacing(10),
     paddingBottom: spacing(3),
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(120,160,255,0.16)',
-    backgroundColor: 'rgba(6,9,20,0.86)',
+    borderBottomColor: palette.border,
   },
   chatName: { color: palette.text, fontSize: 16, fontWeight: '700' },
   name: { color: palette.text, fontSize: 15.5, fontWeight: '700' },
@@ -222,15 +219,14 @@ const styles = StyleSheet.create({
   faint: { color: palette.textFaint, fontSize: 12, lineHeight: 18 },
   bubble: { maxWidth: '82%', paddingHorizontal: spacing(3.5), paddingVertical: spacing(2.8), borderRadius: radius.lg },
   bubbleMine: { backgroundColor: palette.bubbleUser, borderBottomRightRadius: 6 },
-  bubbleTheirs: { backgroundColor: 'rgba(20,29,51,0.94)', borderBottomLeftRadius: 6, borderWidth: 1, borderColor: 'rgba(120,160,255,0.20)' },
+  bubbleTheirs: { backgroundColor: palette.bubbleChar, borderBottomLeftRadius: 6, borderWidth: 1, borderColor: palette.border },
   inputBar: {
     flexDirection: 'row',
     alignItems: 'flex-end',
     padding: spacing(3),
     paddingBottom: Platform.OS === 'ios' ? spacing(8) : spacing(3),
     borderTopWidth: 1,
-    borderTopColor: 'rgba(120,160,255,0.16)',
-    backgroundColor: 'rgba(6,9,20,0.94)',
+    borderTopColor: palette.border,
   },
   input: {
     flex: 1,
@@ -242,7 +238,7 @@ const styles = StyleSheet.create({
     fontSize: 14.5,
     maxHeight: 110,
     borderWidth: 1,
-    borderColor: 'rgba(120,160,255,0.22)',
+    borderColor: palette.border,
   },
   sendBtn: {
     width: 40,
