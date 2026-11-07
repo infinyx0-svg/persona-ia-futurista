@@ -2,10 +2,10 @@ import { Platform } from 'react-native';
 
 /**
  * Paleta futurista (estilo Google Material You nocturno): base azul-noche muy
- * oscura, luces LED azul electrico / purpura / cian y superficies de cristal.
+ * oscura, luces LED azul eléctrico / púrpura / cian y superficies de cristal.
  *
  * Regla de contraste: todo texto se apoya en una superficie con al menos 0.72
- * de opacidad sobre el fondo animado, asi el brillo de las luces nunca reduce
+ * de opacidad sobre el fondo animado, así el brillo de las luces nunca reduce
  * la legibilidad. Los pares texto/fondo cumplen AA (>= 4.5:1) para cuerpo.
  */
 export const palette = {
@@ -23,9 +23,9 @@ export const palette = {
   textFaint: '#A6B4D2',
 
   // acentos LED
-  accent: '#4C8DFF', // azul electrico
+  accent: '#4C8DFF', // azul eléctrico
   accentSoft: '#9CC2FF',
-  accent2: '#A855F7', // purpura
+  accent2: '#A855F7', // púrpura
   accent3: '#22D3EE', // cian
   accent4: '#E879F9', // magenta
 
@@ -117,7 +117,7 @@ export const shadow = Platform.select({
   default: {},
 }) as object;
 
-/** Resplandor suave para elementos activos (botones, pildoras). */
+/** Resplandor suave para elementos activos (botones, píldoras). */
 export const glow = (color: string, radiusPx = 18) =>
   Platform.select({
     ios: {
