@@ -8,12 +8,17 @@
     "userInterfaceStyle": "dark",
     "newArchEnabled": true,
     "backgroundColor": "#0E0B16",
-    "assetBundlePatterns": ["**/*"],
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "android": {
       "package": "com.personaia.app",
       "versionCode": 1,
       "edgeToEdgeEnabled": true,
-      "permissions": ["RECORD_AUDIO", "MODIFY_AUDIO_SETTINGS"],
+      "permissions": [
+        "RECORD_AUDIO",
+        "MODIFY_AUDIO_SETTINGS"
+      ],
       "adaptiveIcon": {
         "backgroundColor": "#0E0B16"
       }
@@ -32,7 +37,11 @@
     "plugins": [],
     "extra": {
       "supabaseUrl": "",
-      "supabaseAnonKey": ""
-    }
+      "supabaseAnonKey": "",
+      "eas": {
+        "projectId": "96caacef-0bd9-4568-89ef-a6d33e56672f"
+      }
+    },
+    "owner": "winterark90"
   }
 }
