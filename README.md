@@ -52,18 +52,18 @@ npx expo start --web
 
 ### Generar un APK instalable (Android)
 
-> **APK ya compilado:** el APK de release está publicado en EAS Build y se puede
-> descargar directamente desde el enlace de la sección **2.1**. No necesitas
-> compilar nada para probarlo en el teléfono.
+> **APK ya compilado y publicado:** el APK de release está adjunto como asset de
+> la **Release v1.0.0** de este repositorio. El enlace es **permanente** (no
+> caduca). No necesitas compilar nada para probarlo en el teléfono.
 
 Hay **tres vías** para obtener el APK. La primera ya está hecha.
 
-#### 2.1 APK listo para descargar (EAS Build)
+#### 2.1 APK listo para descargar (Release permanente)
 
 | Dato | Valor |
 |---|---|
-| **Descarga directa** | **https://expo.dev/artifacts/eas/vTPBWxqdkEE9AecWX-LlQpjDMkbEI2NJjgoVwtcyWL0.apk** |
-| Página del build | https://expo.dev/accounts/winterark90/projects/persona-ia/builds/bfba4090-724b-4aa8-8024-2d3d2257534b |
+| **Página de la Release** | **https://github.com/infinyx0-svg/persona-ia-futurista/releases/tag/v1.0.0** |
+| **Descarga directa del APK** | **https://github.com/infinyx0-svg/persona-ia-futurista/releases/download/v1.0.0/persona-ia-1.0.0.apk** |
 | Archivo | `persona-ia-1.0.0.apk` |
 | Tamaño | **60,9 MB** (63 894 537 bytes) |
 | Versión | `1.0.0` (versionCode `1`) |
@@ -71,15 +71,14 @@ Hay **tres vías** para obtener el APK. La primera ya está hecha.
 | SDK | Expo SDK 54 · React Native 0.81.5 |
 | Perfil | `preview` — `distribution: internal`, `android.buildType: apk` |
 | Firma | Keystore gestionado por EAS (creado en la nube) |
-| Build ID | `bfba4090-724b-4aa8-8024-2d3d2257534b` |
-| Estado | ✅ `FINISHED` |
+| SHA-256 | `02f50276ef0a9c72bbd95056c32981277ba6aa9ebf3d547e59ffb4e664beb79a` |
+| Estado | ✅ publicado y verificado (HTTP 200, 63 894 537 bytes) |
 
 Abre el enlace de descarga directa y el `.apk` empieza a bajar. Después sigue
 "Instalar el APK en el teléfono" abajo.
 
-> El enlace de artefacto de EAS caduca a los **14 días** (hasta el 23/11/2026).
-> Pasado ese plazo, recompila con `eas build -p android --profile preview`
-> (§2.2) o usa la Release de GitHub Actions (§2.3), que no caduca.
+> El enlace de la Release **no caduca**. El artefacto original de EAS sí caducaba
+> a los 14 días; por eso el APK se movió a la Release del repositorio.
 
 #### 2.2 Recompilar con EAS Build
 
@@ -546,13 +545,15 @@ tenían su propio degradado (Chat, En persona, Auth).
 
 ---
 
-## 11. APK compilado con EAS Build (v4)
+## 11. APK compilado y publicado en la Release (v5)
 
-El APK de release **ya está compilado y verificado** en EAS Build.
+El APK de release **ya está compilado, publicado y verificado**. Vive como asset
+de la Release `v1.0.0` de este repositorio, con enlace **permanente**.
 
 | Dato | Valor |
 |---|---|
-| **Descarga directa** | **https://expo.dev/artifacts/eas/vTPBWxqdkEE9AecWX-LlQpjDMkbEI2NJjgoVwtcyWL0.apk** |
+| **Página de la Release** | **https://github.com/infinyx0-svg/persona-ia-futurista/releases/tag/v1.0.0** |
+| **Descarga directa** | **https://github.com/infinyx0-svg/persona-ia-futurista/releases/download/v1.0.0/persona-ia-1.0.0.apk** |
 | Archivo | `persona-ia-1.0.0.apk` |
 | Tamaño | **60,9 MB** (63 894 537 bytes) |
 | Versión | `1.0.0` · versionCode `1` |
@@ -562,7 +563,9 @@ El APK de release **ya está compilado y verificado** en EAS Build.
 | Cuenta Expo | `winterark90` |
 | Project ID | `96caacef-0bd9-4568-89ef-a6d33e56672f` |
 | Build ID | `bfba4090-724b-4aa8-8024-2d3d2257534b` |
-| Estado | ✅ `FINISHED` |
+| Release ID | `439694040` · asset ID `729126419` |
+| SHA-256 | `02f50276ef0a9c72bbd95056c32981277ba6aa9ebf3d547e59ffb4e664beb79a` |
+| Estado | ✅ publicado y verificado |
 | Firma | Keystore gestionado por EAS (generado en la nube) |
 
 ### 11.1 Cómo se generó
@@ -592,10 +595,21 @@ instalable en lugar de un `.aab`.
 > Requiere **Android 8.0 (API 26)** o superior. El APK incluye `arm64-v8a` y
 > `armeabi-v7a`, así que funciona en prácticamente cualquier teléfono moderno.
 
-### 11.3 Caducidad del enlace
+### 11.3 Permanencia del enlace
 
-El enlace de artefacto de EAS caduca a los **14 días** desde la compilación
-(hasta el **23/11/2026**). Después de esa fecha:
+El enlace de la Release **no caduca**: el APK es un asset del repositorio y
+seguirá descargable mientras la Release exista. El artefacto original de EAS
+caducaba a los 14 días, por eso se publicó en la Release.
 
-- Recompila con `eas build -p android --profile preview` (§2.2), o
-- Usa la Release de GitHub Actions (§2.3), que no caduca.
+Para republicar el APK en la Release (por ejemplo tras recompilar):
+
+1. En GitHub, abre **Actions → Publish APK Release → Run workflow**.
+2. Pega la nueva URL del APK en el campo `apk_url` y el tag en `tag`.
+3. El workflow descarga el APK, valida que sea un APK real y lo adjunta a la
+   Release con `gh release upload --clobber`.
+
+También puedes hacerlo a mano:
+
+```bash
+gh release upload v1.0.0 persona-ia-1.0.0.apk --clobber
+```
