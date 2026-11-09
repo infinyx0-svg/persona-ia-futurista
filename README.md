@@ -52,36 +52,82 @@ npx expo start --web
 
 ### Generar un APK instalable (Android)
 
-> **Estado del APK:** el APK se compila con **GitHub Actions** (Vía 1), que es la
-> vía recomendada y ya está configurada en el repositorio. El build local (Vía 2)
-> funciona en una máquina normal, pero **no cabe en el sandbox donde se generó
-> este proyecto** (2 GB de RAM y 4 GB de disco: el NDK de Android solo ya ocupa
-> ~2 GB y el build de release necesita más memoria de la disponible). Por eso la
-> compilación se delega a la nube de GitHub, que es gratis para repositorios
-> públicos.
+> **APK ya compilado:** el APK de release está publicado en EAS Build y se puede
+> descargar directamente desde el enlace de la sección **2.1**. No necesitas
+> compilar nada para probarlo en el teléfono.
 
-Hay **dos vías** para obtener el APK:
+Hay **tres vías** para obtener el APK. La primera ya está hecha.
 
-**Vía 1 — GitHub Actions (recomendado, automático, sin instalar nada)**
+#### 2.1 APK listo para descargar (EAS Build)
+
+| Dato | Valor |
+|---|---|
+| **Descarga directa** | **https://expo.dev/artifacts/eas/vTPBWxqdkEE9AecWX-LlQpjDMkbEI2NJjgoVwtcyWL0.apk** |
+| Página del build | https://expo.dev/accounts/winterark90/projects/persona-ia/builds/bfba4090-724b-4aa8-8024-2d3d2257534b |
+| Archivo | `persona-ia-1.0.0.apk` |
+| Tamaño | **60,9 MB** (63 894 537 bytes) |
+| Versión | `1.0.0` (versionCode `1`) |
+| Paquete | `com.personaia.app` |
+| SDK | Expo SDK 54 · React Native 0.81.5 |
+| Perfil | `preview` — `distribution: internal`, `android.buildType: apk` |
+| Firma | Keystore gestionado por EAS (creado en la nube) |
+| Build ID | `bfba4090-724b-4aa8-8024-2d3d2257534b` |
+| Estado | ✅ `FINISHED` |
+
+Abre el enlace de descarga directa y el `.apk` empieza a bajar. Después sigue
+"Instalar el APK en el teléfono" abajo.
+
+> El enlace de artefacto de EAS caduca a los **14 días** (hasta el 23/11/2026).
+> Pasado ese plazo, recompila con `eas build -p android --profile preview`
+> (§2.2) o usa la Release de GitHub Actions (§2.3), que no caduca.
+
+#### 2.2 Recompilar con EAS Build
+
+El proyecto ya está vinculado a la cuenta `winterark90` (projectId
+`96caacef-0bd9-4568-89ef-a6d33e56672f`) y trae `eas.json` con el perfil `preview`
+que genera APK:
+
+```bash
+npm install -g eas-cli
+eas login                      # o: export EXPO_TOKEN=<tu token>
+eas build -p android --profile preview
+```
+
+`eas.json` incluido:
+
+```json
+{
+  "build": {
+    "preview": {
+      "distribution": "internal",
+      "android": { "buildType": "apk" }
+    },
+    "production": {
+      "autoIncrement": true,
+      "android": { "buildType": "app-bundle" }
+    }
+  }
+}
+```
+
+- `preview` → **APK** instalable directamente (el que se usa aquí).
+- `production` → **AAB** para Google Play.
+
+Para compilar sin interacción (CI): `eas build -p android --profile preview --non-interactive`
+con `EXPO_TOKEN` en el entorno.
+
+#### 2.3 GitHub Actions (automático, sin instalar nada)
+
 El repositorio incluye `.github/workflows/build-apk.yml`, que compila el APK en
 la nube de GitHub y lo publica como **Release descargable**:
 1. En GitHub, abre la pestaña **Actions** → **Build APK**.
 2. Pulsa **Run workflow** (rama `main`).
 3. Al terminar (~10 min), el APK queda en la pestaña **Releases** del repositorio
    (tag `apk-latest`) y también como artefacto `persona-ia-apk` en la ejecución.
-4. Descarga el `.apk` desde la Release y sigue "Instalar el APK" abajo.
 
 También puedes dispararlo creando un tag: `git tag v1.0.0 && git push origin v1.0.0`.
 
-**Vía 2 — Build local (EAS o Gradle)**
-
-Con EAS Build (recomendado, sin instalar Android Studio):
-```bash
-npm install -g eas-cli
-eas login
-eas build -p android --profile preview
-```
-EAS entrega un enlace de descarga del `.apk`.
+#### 2.4 Build local con Gradle
 
 Build local con Gradle (necesitas **JDK 17** y **Android SDK** con NDK 27.1):
 ```bash
@@ -130,6 +176,7 @@ así que `assembleRelease` produce un APK **firmado e instalable** directamente.
 | Fallback al motor local sin API key | ✅ verificado |
 | Rediseño futurista: fondo LED animado | ✅ renderiza en web |
 | Contraste de texto sobre el fondo | ✅ AA (velo + superficies de cristal) |
+| **APK de release (EAS Build)** | ✅ `FINISHED` — 60,9 MB |
 
 ---
 
@@ -386,6 +433,7 @@ persona-ia/
 ├── App.tsx                     # Router + barra de pestañas
 ├── index.ts                    # Entry point
 ├── app.json                    # Config Expo (Android/iOS/web)
+├── eas.json                    # Perfiles de EAS Build (preview = APK)
 ├── src/
 │   ├── types.ts                # Modelo de datos completo
 │   ├── theme.ts                # Paletas, radios, sombras
@@ -445,9 +493,10 @@ persona-ia/
 
 ```bash
 npm run typecheck     # tsc --noEmit
-npm run android       # expo start --android
+npm run android       # expo run:android
 npm run web           # expo start --web
 npx expo start -c     # limpiar caché de Metro
+eas build -p android --profile preview   # APK en la nube
 ```
 
 ---
@@ -494,3 +543,59 @@ el color de las luces:
 El fondo se integra en el contenedor `Screen` (todas las pantallas), en el
 arranque (`BootScreen`), en la barra de pestañas y en las pantallas que antes
 tenían su propio degradado (Chat, En persona, Auth).
+
+---
+
+## 11. APK compilado con EAS Build (v4)
+
+El APK de release **ya está compilado y verificado** en EAS Build.
+
+| Dato | Valor |
+|---|---|
+| **Descarga directa** | **https://expo.dev/artifacts/eas/vTPBWxqdkEE9AecWX-LlQpjDMkbEI2NJjgoVwtcyWL0.apk** |
+| Archivo | `persona-ia-1.0.0.apk` |
+| Tamaño | **60,9 MB** (63 894 537 bytes) |
+| Versión | `1.0.0` · versionCode `1` |
+| Paquete | `com.personaia.app` |
+| SDK | Expo SDK 54 · React Native 0.81.5 |
+| Perfil | `preview` (`distribution: internal`, `android.buildType: apk`) |
+| Cuenta Expo | `winterark90` |
+| Project ID | `96caacef-0bd9-4568-89ef-a6d33e56672f` |
+| Build ID | `bfba4090-724b-4aa8-8024-2d3d2257534b` |
+| Estado | ✅ `FINISHED` |
+| Firma | Keystore gestionado por EAS (generado en la nube) |
+
+### 11.1 Cómo se generó
+
+```bash
+npm install -g eas-cli
+export EXPO_TOKEN=<tu token de expo.dev>
+eas whoami                                  # winterark90
+eas init --non-interactive --force          # vincula el proyecto
+eas build -p android --profile preview --non-interactive
+```
+
+Tiempos reales de este build: **~20 min en cola** (plan gratuito) + **~8 min de
+compilación**. El perfil `preview` de `eas.json` es el que produce un `.apk`
+instalable en lugar de un `.aab`.
+
+### 11.2 Instalación en el teléfono
+
+1. Abre el enlace de descarga en el teléfono (o descárgalo en la computadora y
+   pásalo por USB / Drive / WhatsApp).
+2. Toca el archivo `persona-ia-1.0.0.apk`.
+3. Android pedirá **"Permitir instalar apps de esta fuente"** → actívalo.
+4. Confirma **Instalar**.
+5. Si Play Protect avisa de "app desconocida", pulsa **"Instalar de todos modos"**.
+6. Abre **Persona IA** desde el cajón de apps.
+
+> Requiere **Android 8.0 (API 26)** o superior. El APK incluye `arm64-v8a` y
+> `armeabi-v7a`, así que funciona en prácticamente cualquier teléfono moderno.
+
+### 11.3 Caducidad del enlace
+
+El enlace de artefacto de EAS caduca a los **14 días** desde la compilación
+(hasta el **23/11/2026**). Después de esa fecha:
+
+- Recompila con `eas build -p android --profile preview` (§2.2), o
+- Usa la Release de GitHub Actions (§2.3), que no caduca.
