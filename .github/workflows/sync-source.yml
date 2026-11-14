@@ -1,0 +1,66 @@
+name: Sync source v6
+
+on:
+  workflow_dispatch:
+    inputs:
+      zip_url:
+        description: 'Public URL of the source ZIP'
+        required: true
+        default: 'https://static.teamily.ai/sites/54a4a172-6b6d-4f0e-a7ce-6352f42073ac/documents/persona-ia-v7/persona-ia-source-v7.zip'
+      message:
+        description: 'Commit message'
+        required: false
+        default: 'feat(v6): personajes 3D estilo VTuber anime'
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download and extract source
+        run: |
+          set -euo pipefail
+          curl -fsSL --retry 3 -o /tmp/src.zip "${{ inputs.zip_url }}"
+          ls -la /tmp/src.zip
+          mkdir -p /tmp/src
+          unzip -q -o /tmp/src.zip -d /tmp/src
+          SRC="$(find /tmp/src -maxdepth 2 -name package.json -printf '%h\n' | head -1)"
+          echo "SRC=$SRC"
+          test -n "$SRC"
+          echo "SRC=$SRC" >> "$GITHUB_ENV"
+
+      - name: Copy project files into the repo
+        run: |
+          set -euo pipefail
+          rsync -a \
+            --exclude '.github' \
+            --exclude 'node_modules' \
+            --exclude 'android' \
+            --exclude 'ios' \
+            --exclude '.git' \
+            "$SRC"/ ./
+          echo "--- assets/vtuber ---"
+          ls -la assets/vtuber
+          echo "--- keystore ---"
+          ls -la keystore
+          echo "--- version ---"
+          grep -n '"version"' app.json package.json
+
+      - name: Commit and push
+        run: |
+          set -euo pipefail
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "Nothing to commit"; exit 0
+          fi
+          git commit -m "${{ inputs.message }}"
+          git push origin HEAD:main
+          echo "Pushed $(git rev-parse --short HEAD)"
