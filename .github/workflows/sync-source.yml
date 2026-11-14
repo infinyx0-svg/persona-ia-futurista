@@ -1,66 +1,71 @@
-name: Sync source v6
+name: Sync source
 
+# Sincroniza el codigo fuente del proyecto en la rama main a partir de un ZIP
+# publico. Se lanza a mano: Actions -> Sync source -> Run workflow.
 on:
   workflow_dispatch:
     inputs:
       zip_url:
-        description: 'Public URL of the source ZIP'
+        description: 'URL publica del ZIP con el codigo fuente'
         required: true
-        default: 'https://static.teamily.ai/sites/54a4a172-6b6d-4f0e-a7ce-6352f42073ac/documents/persona-ia-v7/persona-ia-source-v7.zip'
       message:
-        description: 'Commit message'
+        description: 'Mensaje de commit'
         required: false
-        default: 'feat(v6): personajes 3D estilo VTuber anime'
+        default: 'chore: sync source'
 
 permissions:
   contents: write
 
 jobs:
   sync:
+    name: Sincronizar codigo
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
+      - name: Descargar el repositorio
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Download and extract source
+      - name: Descargar y extraer el ZIP
         run: |
           set -euo pipefail
-          curl -fsSL --retry 3 -o /tmp/src.zip "${{ inputs.zip_url }}"
-          ls -la /tmp/src.zip
           mkdir -p /tmp/src
+          curl -L --fail --retry 3 --retry-delay 5 -o /tmp/src.zip "${{ github.event.inputs.zip_url }}"
+          file /tmp/src.zip
           unzip -q -o /tmp/src.zip -d /tmp/src
-          SRC="$(find /tmp/src -maxdepth 2 -name package.json -printf '%h\n' | head -1)"
-          echo "SRC=$SRC"
-          test -n "$SRC"
-          echo "SRC=$SRC" >> "$GITHUB_ENV"
+          echo "--- raiz extraida ---"
+          ls -la /tmp/src | head -40
 
-      - name: Copy project files into the repo
+      - name: Copiar los archivos al repositorio
         run: |
           set -euo pipefail
-          rsync -a \
-            --exclude '.github' \
-            --exclude 'node_modules' \
-            --exclude 'android' \
-            --exclude 'ios' \
-            --exclude '.git' \
-            "$SRC"/ ./
-          echo "--- assets/vtuber ---"
+          ROOT=/tmp/src
+          if [ ! -f "$ROOT/app.json" ]; then
+            ROOT="$(find /tmp/src -maxdepth 3 -name app.json -printf '%h\n' | head -1)"
+          fi
+          echo "ROOT=$ROOT"
+          test -f "$ROOT/app.json"
+          find . -mindepth 1 -maxdepth 1 -not -name '.git' -exec rm -rf {} +
+          cp -a "$ROOT"/. .
+          rm -rf node_modules android/.gradle android/build android/app/build
+          echo "--- archivos clave ---"
+          ls -la
+          echo "--- assets 3D ---"
           ls -la assets/vtuber
-          echo "--- keystore ---"
-          ls -la keystore
-          echo "--- version ---"
-          grep -n '"version"' app.json package.json
+          test -f assets/vtuber/dulce.jpg
+          test -f src/components/AnimeAvatar.tsx
+          grep -q "assets/vtuber" src/components/AnimeAvatar.tsx
 
-      - name: Commit and push
+      - name: Commit y push
         run: |
           set -euo pipefail
-          git config user.name  "github-actions[bot]"
+          git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A
           if git diff --cached --quiet; then
-            echo "Nothing to commit"; exit 0
+            echo "Sin cambios que confirmar"
+          else
+            git commit -m "${{ github.event.inputs.message }}"
+            git push origin HEAD:main
           fi
-          git commit -m "${{ inputs.message }}"
-          git push origin HEAD:main
-          echo "Pushed $(git rev-parse --short HEAD)"
