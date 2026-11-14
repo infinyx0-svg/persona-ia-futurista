@@ -32,10 +32,10 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      # El runner ubuntu-latest ya trae el Android SDK preinstalado en
-      # /usr/local/lib/android/sdk. NO se usa android-actions/setup-android@v3
-      # porque intenta instalar el paquete "tools", que Google retiro del
-      # repositorio y hace fallar el job con "Failed to find package 'tools'".
+      # El runner ubuntu-latest ya trae el Android SDK completo (platform-tools,
+      # platforms, build-tools, ndk) en /usr/local/lib/android/sdk. Solo hay que
+      # exportar las variables: no se instala nada ni se hace chmod (el SDK es
+      # de root y chmod falla con "Operation not permitted").
       - name: Configurar Android SDK (preinstalado en el runner)
         run: |
           set -euo pipefail
@@ -44,24 +44,10 @@ jobs:
           echo "ANDROID_HOME=$SDK" >> "$GITHUB_ENV"
           echo "SDK en: $SDK"
           ls "$SDK"
-          # localizar sdkmanager (la ruta cambia segun la version de cmdline-tools)
-          SDKMGR="$(find "$SDK/cmdline-tools" -name sdkmanager -type f 2>/dev/null | head -1)"
-          if [ -z "$SDKMGR" ]; then
-            echo "No hay sdkmanager, descargando cmdline-tools"
-            mkdir -p "$SDK/cmdline-tools"
-            curl -fsSL -o /tmp/cmdline.zip https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
-            unzip -q -o /tmp/cmdline.zip -d /tmp/cmdline
-            mv /tmp/cmdline/cmdline-tools "$SDK/cmdline-tools/latest"
-            SDKMGR="$SDK/cmdline-tools/latest/bin/sdkmanager"
-          fi
-          echo "sdkmanager: $SDKMGR"
-          echo "SDKMGR=$SDKMGR" >> "$GITHUB_ENV"
-          chmod +x "$SDKMGR"
-          # aceptar licencias e instalar solo lo que necesita el build
-          yes | "$SDKMGR" --licenses > /dev/null 2>&1 || true
-          "$SDKMGR" --install "platform-tools" "platforms;android-36" "build-tools;36.0.0" > /dev/null
-          echo "--- paquetes instalados ---"
-          "$SDKMGR" --list_installed | head -20
+          echo "--- platforms ---"
+          ls "$SDK/platforms" || true
+          echo "--- build-tools ---"
+          ls "$SDK/build-tools" || true
 
       - name: Instalar dependencias
         run: npm install --no-audit --no-fund
