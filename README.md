@@ -367,11 +367,14 @@ Ella propone, el usuario aprueba antes de guardar. Chat propio, memoria
 independiente, apariciones espontáneas configurables.
 → `src/engine/secondary.ts`, `src/screens/Secundarios.tsx`
 
-### §10 Avatar anime y ropa
-Avatar 2D por capas en SVG con respiración, parpadeo, boca al hablar, cejas,
-rubor y mirada según emoción. Armario inicial de 5 conjuntos, propuestas de
-ella, aceptar/rechazar, prendas nuevas manuales.
-→ `src/components/AnimeAvatar.tsx`, `src/engine/wardrobe.ts`,
+### §10 Avatar 3D estilo VTuber y ropa
+Personajes **3D de anime tipo VTuber** (render cel-shaded) en lugar del antiguo
+avatar vectorial. Cinco arquetipos visuales, uno por personalidad, con
+animación sutil: respiración, parpadeo real (variante con los ojos cerrados),
+balanceo de cabeza, pulso al hablar y halo teñido por la emoción actual.
+Armario inicial de 5 conjuntos, propuestas de ella, aceptar/rechazar, prendas
+nuevas manuales.
+→ `src/components/AnimeAvatar.tsx`, `assets/vtuber/`, `src/engine/wardrobe.ts`,
 `src/screens/Armario.tsx`
 
 ### §11 Modo Teléfono
@@ -433,13 +436,15 @@ persona-ia/
 ├── index.ts                    # Entry point
 ├── app.json                    # Config Expo (Android/iOS/web)
 ├── eas.json                    # Perfiles de EAS Build (preview = APK)
+├── assets/
+│   └── vtuber/                 # Personajes 3D: {id}.jpg + {id}_blink.jpg
 ├── src/
 │   ├── types.ts                # Modelo de datos completo
 │   ├── theme.ts                # Paletas, radios, sombras
 │   ├── components/
 │   │   ├── UI.tsx              # Screen, Card, Button, Field, Chip…
 │   │   ├── AuroraBackground.tsx # Fondo futurista: luces LED animadas
-│   │   └── AnimeAvatar.tsx     # Avatar SVG animado por emoción
+│   │   └── AnimeAvatar.tsx     # Avatar 3D VTuber animado (respira, parpadea, habla)
 │   ├── engine/
 │   │   ├── personality.ts      # Rasgos, presets, familia, creación
 │   │   ├── emotion.ts          # Emociones, rutinas, hora/clima
@@ -613,3 +618,83 @@ También puedes hacerlo a mano:
 ```bash
 gh release upload v1.0.0 persona-ia-1.0.0.apk --clobber
 ```
+## 12. Personajes 3D estilo VTuber (v6)
+
+Los avatares 2D vectoriales se sustituyeron por **personajes 3D de anime tipo
+VTuber**, renderizados en estilo cel-shaded y ambientados en la paleta azul y
+púrpura de la app. La personalidad, las emociones, la memoria, la relación y el
+motor LLM **no cambiaron**: el avatar es solo la capa visual.
+
+### 12.1 Los cinco personajes
+
+Cada personaje se asigna de forma **determinista** a partir de sus rasgos e
+intensidades, así que siempre recibe el mismo avatar aunque se recargue la app.
+
+| id | Arquetipo | Rasgos que lo activan | Aspecto |
+|---|---|---|---|
+| `dulce` | Dulce y cercana | afectuosa, empática, tímida, tranquila, protectora | Pelo largo lavanda-rosa con trenza, ojos violeta, jersey crema |
+| `chispa` | Chispa | energética, bromista, competitiva, coqueta | Pelo corto coral con mechón cian, ojos ámbar, sudadera azul eléctrico |
+| `serena` | Serena | tranquila, seria, empática, curiosa, fría | Pelo largo azul marino, ojos verde azulado, cuello alto índigo |
+| `filo` | Filo | sarcástica, fría, competitiva, seria, dramática | Bob negro asimétrico con mechón magenta, ojos carmesí, cazadora |
+| `musa` | Musa | creativa, dramática, coqueta, curiosa, afectuosa | Pelo ondulado violeta pastel, ojos magenta estrellados, blusa ciruela |
+
+Los cinco presets de personalidad (`dulce`, `chispa`, `serena`, `filo`, `musa`)
+mapean 1:1 a su arquetipo visual. Verificado con 200 semillas por preset: 100 %
+de coincidencia.
+
+### 12.2 Animación VTuber
+
+Todo corre en el **hilo nativo** (`useNativeDriver`), sin re-renders de React
+por fotograma:
+
+| Animación | Implementación | Periodo |
+|---|---|---|
+| Respiración | escala 1 → 1.014 + desplazamiento vertical −3 px | 2,4 s |
+| Balanceo de cabeza | rotación −1,2° → 1,2° + vaivén lateral ±2 px | 5,2 s |
+| Parpadeo | cambio a `{id}_blink.jpg` durante 130 ms | 2,8–5,2 s aleatorio |
+| Habla | pulso de escala 1 → 1.03 mientras `speaking` | 300 ms |
+| Emoción | halo y tinte con `emotionColor(emotion)` | continuo |
+| Ropa | velo inferior teñido con el color de la prenda | continuo |
+
+El parpadeo es **real**: se generó una variante del render con los ojos
+cerrados para cada personaje, no es un truco de opacidad. La diferencia entre
+ambas imágenes se verificó por diff localizado (banda de ojos con desviación
+media 6–7 frente a 2,5–4,2 en el resto de la imagen).
+
+### 12.3 Dónde aparece
+
+`AnimeAvatar` conserva **exactamente la misma firma** que antes
+(`character, emotion, outfit, size, speaking, intensity`), así que ninguna
+pantalla necesitó cambios de API:
+
+- **Chat** — avatar de 44 px en la cabecera, reacciona a la emoción y al habla
+- **En persona** — escena de 300 px con respiración, parpadeo y pulso al hablar
+- **Creación del personaje** — vista previa de 200 px en el paso de rasgos y de
+  220 px en el paso de apariencia; cambia en vivo al elegir preset
+- **Galería de personajes** — 56 px por personaje (principal y secundarios)
+- **Armario** — 230 px con el velo de color de la prenda puesta
+
+### 12.4 Assets y rendimiento
+
+```
+assets/vtuber/
+├── dulce.jpg          # 512×512, ~42 KB
+├── dulce_blink.jpg    # 512×512, ~43 KB
+├── chispa.jpg  chispa_blink.jpg
+├── serena.jpg  serena_blink.jpg
+├── filo.jpg    filo_blink.jpg
+└── musa.jpg    musa_blink.jpg
+```
+
+**10 archivos, 783 KB en total.** Se generaron a 896×1200 y se recortaron a
+512×512 (cara y hombros) y se comprimieron a JPEG q88 progresivo. El `require()`
+es estático (rutas literales) para que Metro los empaquete en el APK.
+
+### 12.5 Verificación
+
+- `npx tsc --noEmit` → **0 errores**.
+- Mapeo de arquetipos probado con 200 semillas por preset.
+- Diff de parpadeo verificado numéricamente en los 5 personajes.
+- El export web de Metro no se pudo completar en este sandbox (límite de 2 GB
+  de RAM: Metro fue terminado por el OOM killer). La verificación es de
+  compilación de tipos y de lógica, no de render en dispositivo.

@@ -1,8 +1,109 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { Animated, Easing, StyleSheet, View } from 'react-native';
-import Svg, { Circle, Ellipse, G, Path, Rect } from 'react-native-svg';
-import { Character, EmotionKey, Outfit } from '../types';
-import { EMOTION_FACE } from '../engine/emotion';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Animated, Easing, ImageSourcePropType, StyleSheet, View } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Character, EmotionKey, Outfit, TraitKey } from '../types';
+import { emotionColor } from '../engine/emotion';
+
+/**
+ * Avatar 3D estilo VTuber.
+ *
+ * Sustituye al antiguo avatar vectorial (SVG) por un render 3D de anime con
+ * animación sutil, manteniendo EXACTAMENTE la misma firma pública
+ * (`character, emotion, outfit, size, speaking, intensity`) para que ninguna
+ * pantalla que lo usa tenga que cambiar.
+ *
+ * Animación (todo en el hilo nativo, sin re-renders de React):
+ *  - respiración: escala + desplazamiento vertical lentos (2.4 s)
+ *  - balanceo de cabeza: rotación y vaivén laterales muy suaves (5.2 s)
+ *  - parpadeo: se cambia a la variante con los ojos cerrados ~130 ms cada
+ *    2.8-5.2 s (único cambio de estado, y es infrecuente)
+ *  - habla: pulso rápido de escala mientras `speaking` es true
+ *  - emoción: halo y tinte de color según la emoción actual
+ *  - ropa: velo inferior teñido con el color de la prenda puesta
+ *
+ * Rendimiento: solo se animan `transform` y `opacity` con `useNativeDriver`,
+ * así que no hay repintado de React por fotograma. Las imágenes son JPEG de
+ * ~40 KB, ya recortadas a 512x512.
+ */
+
+type AvatarSet = { open: ImageSourcePropType; blink: ImageSourcePropType };
+
+/** Mapa estático de assets: `require` necesita rutas literales. */
+const AVATARS: Record<string, AvatarSet> = {
+  dulce: {
+    open: require('../../assets/vtuber/dulce.jpg'),
+    blink: require('../../assets/vtuber/dulce_blink.jpg'),
+  },
+  chispa: {
+    open: require('../../assets/vtuber/chispa.jpg'),
+    blink: require('../../assets/vtuber/chispa_blink.jpg'),
+  },
+  serena: {
+    open: require('../../assets/vtuber/serena.jpg'),
+    blink: require('../../assets/vtuber/serena_blink.jpg'),
+  },
+  filo: {
+    open: require('../../assets/vtuber/filo.jpg'),
+    blink: require('../../assets/vtuber/filo_blink.jpg'),
+  },
+  musa: {
+    open: require('../../assets/vtuber/musa.jpg'),
+    blink: require('../../assets/vtuber/musa_blink.jpg'),
+  },
+};
+
+export const AVATAR_IDS = Object.keys(AVATARS);
+
+/**
+ * Arquetipos visuales. Cada personaje se asigna al arquetipo que mejor encaja
+ * con sus rasgos (y su intensidad), de forma determinista: el mismo personaje
+ * siempre recibe el mismo avatar, aunque se recargue la app.
+ */
+const ARCHETYPES: { id: string; weights: Partial<Record<TraitKey, number>> }[] = [
+  {
+    id: 'dulce',
+    weights: { afectuosa: 1, empatica: 0.9, timida: 0.8, tranquila: 0.5, protectora: 0.4 },
+  },
+  {
+    id: 'chispa',
+    weights: { energetica: 1, bromista: 0.9, competitiva: 0.7, coqueta: 0.4, curiosa: 0.3 },
+  },
+  {
+    id: 'serena',
+    weights: { tranquila: 1, seria: 0.8, empatica: 0.6, curiosa: 0.4, fria: 0.3 },
+  },
+  {
+    id: 'filo',
+    weights: { sarcastica: 1, fria: 0.9, competitiva: 0.6, seria: 0.4, dramatica: 0.2 },
+  },
+  {
+    id: 'musa',
+    weights: { creativa: 1, dramatica: 0.8, coqueta: 0.6, curiosa: 0.5, afectuosa: 0.3 },
+  },
+];
+
+/**
+ * Elige el arquetipo visual de un personaje a partir de sus rasgos.
+ * Empate -> se resuelve con `avatarSeed`, que es estable por personaje.
+ */
+export function avatarIdFor(character: Character): string {
+  const traits = character.traits ?? ({} as Character['traits']);
+  let best = ARCHETYPES[0].id;
+  let bestScore = -1;
+  for (const arch of ARCHETYPES) {
+    let score = 0;
+    for (const [key, w] of Object.entries(arch.weights)) {
+      score += ((traits[key as TraitKey] ?? 0) / 3) * (w as number);
+    }
+    // desempate estable y determinista
+    score += ((character.avatarSeed ?? 0) % 1000) / 1_000_000;
+    if (score > bestScore) {
+      bestScore = score;
+      best = arch.id;
+    }
+  }
+  return best;
+}
 
 interface Props {
   character: Character;
@@ -13,165 +114,212 @@ interface Props {
   intensity?: number;
 }
 
-export function AnimeAvatar({ character, emotion, outfit, size = 260, speaking = false, intensity = 0.6 }: Props) {
+export function AnimeAvatar({
+  character,
+  emotion,
+  outfit,
+  size = 260,
+  speaking = false,
+  intensity = 0.6,
+}: Props) {
   const breathe = useRef(new Animated.Value(0)).current;
+  const sway = useRef(new Animated.Value(0)).current;
+  const talk = useRef(new Animated.Value(0)).current;
   const [blink, setBlink] = useState(false);
-  const [mouth, setMouth] = useState(0);
-  const face = EMOTION_FACE[emotion] ?? EMOTION_FACE.tranquila;
 
+  const avatarId = useMemo(() => avatarIdFor(character), [character]);
+  const set = AVATARS[avatarId] ?? AVATARS.dulce;
+  const tint = emotionColor(emotion);
+  const amp = Math.max(0.35, Math.min(1.4, intensity));
+
+  // --- respiración ---
   useEffect(() => {
     const loop = Animated.loop(
       Animated.sequence([
-        Animated.timing(breathe, { toValue: 1, duration: 2200, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
-        Animated.timing(breathe, { toValue: 0, duration: 2200, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+        Animated.timing(breathe, {
+          toValue: 1,
+          duration: 2400,
+          easing: Easing.inOut(Easing.sin),
+          useNativeDriver: true,
+        }),
+        Animated.timing(breathe, {
+          toValue: 0,
+          duration: 2400,
+          easing: Easing.inOut(Easing.sin),
+          useNativeDriver: true,
+        }),
       ]),
     );
     loop.start();
     return () => loop.stop();
   }, [breathe]);
 
+  // --- balanceo de cabeza ---
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(sway, {
+          toValue: 1,
+          duration: 5200,
+          easing: Easing.inOut(Easing.sin),
+          useNativeDriver: true,
+        }),
+        Animated.timing(sway, {
+          toValue: 0,
+          duration: 5200,
+          easing: Easing.inOut(Easing.sin),
+          useNativeDriver: true,
+        }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [sway]);
+
+  // --- parpadeo ---
   useEffect(() => {
     let alive = true;
-    const tick = () => {
+    let closeTimer: ReturnType<typeof setTimeout> | undefined;
+    let nextTimer: ReturnType<typeof setTimeout> | undefined;
+    const schedule = () => {
       if (!alive) return;
-      setBlink(true);
-      setTimeout(() => alive && setBlink(false), 120);
-      setTimeout(tick, 2600 + Math.random() * 3200);
+      nextTimer = setTimeout(() => {
+        if (!alive) return;
+        setBlink(true);
+        closeTimer = setTimeout(() => {
+          if (!alive) return;
+          setBlink(false);
+          schedule();
+        }, 130);
+      }, 2800 + Math.random() * 2400);
     };
-    const t = setTimeout(tick, 1500);
+    schedule();
     return () => {
       alive = false;
-      clearTimeout(t);
+      if (nextTimer) clearTimeout(nextTimer);
+      if (closeTimer) clearTimeout(closeTimer);
     };
   }, []);
 
+  // --- habla ---
   useEffect(() => {
     if (!speaking) {
-      setMouth(0);
+      talk.stopAnimation();
+      talk.setValue(0);
       return;
     }
-    const id = setInterval(() => setMouth(Math.random()), 110);
-    return () => clearInterval(id);
-  }, [speaking]);
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(talk, {
+          toValue: 1,
+          duration: 300,
+          easing: Easing.inOut(Easing.quad),
+          useNativeDriver: true,
+        }),
+        Animated.timing(talk, {
+          toValue: 0,
+          duration: 300,
+          easing: Easing.inOut(Easing.quad),
+          useNativeDriver: true,
+        }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [speaking, talk]);
 
-  const translateY = breathe.interpolate({ inputRange: [0, 1], outputRange: [0, -4] });
-  const scale = breathe.interpolate({ inputRange: [0, 1], outputRange: [1, 1.012] });
+  const translateY = breathe.interpolate({ inputRange: [0, 1], outputRange: [0, -3 * amp] });
+  const breatheScale = breathe.interpolate({ inputRange: [0, 1], outputRange: [1, 1 + 0.014 * amp] });
+  const translateX = sway.interpolate({ inputRange: [0, 1], outputRange: [-2 * amp, 2 * amp] });
+  const rotate = sway.interpolate({ inputRange: [0, 1], outputRange: ['-1.2deg', '1.2deg'] });
+  const talkScale = talk.interpolate({ inputRange: [0, 1], outputRange: [1, 1 + 0.03 * amp] });
 
-  const hair = character.hairColor;
-  const eye = character.eyeColor;
-  const skin = character.skinTone;
   const top = outfit?.top ?? '#4C8DFF';
-  const bottom = outfit?.bottom ?? '#2B2233';
-
-  const eyeOpen = blink ? 0.08 : Math.max(0.25, face.eye);
-  const browY = 96 - face.brow * 5;
-  const mouthOpen = speaking ? 2 + mouth * 5 : Math.max(0, face.mouth) * 2.5;
-  const mouthCurve = face.mouth * 5;
 
   return (
-    <Animated.View style={{ transform: [{ translateY }, { scale }] }}>
-      <View style={[styles.wrap, { width: size, height: size * 1.15 }]}>
-        <Svg width={size} height={size * 1.15} viewBox="0 0 200 230">
-          {/* halo */}
-          <Circle cx="100" cy="105" r="86" fill="#A855F7" opacity={0.07} />
-          <Circle cx="100" cy="105" r="70" fill="#4C8DFF" opacity={0.08} />
+    <View style={[styles.wrap, { width: size, height: size }]}>
+      {/* halo de emoción */}
+      <Animated.View
+        pointerEvents="none"
+        style={[
+          styles.halo,
+          {
+            width: size * 0.94,
+            height: size * 0.94,
+            borderRadius: size * 0.47,
+            backgroundColor: tint,
+            opacity: breathe.interpolate({ inputRange: [0, 1], outputRange: [0.16, 0.3] }),
+            transform: [{ scale: breatheScale }],
+          },
+        ]}
+      />
 
-          {/* cuerpo / ropa */}
-          <Path d="M52 230 C52 186 70 168 100 168 C130 168 148 186 148 230 Z" fill={top} />
-          <Path d="M78 168 L100 196 L122 168 L122 230 L78 230 Z" fill={bottom} opacity={0.9} />
-          <Path d="M52 230 C52 200 62 184 78 176 L86 230 Z" fill="#ffffff" opacity={0.08} />
+      <Animated.Image
+        source={blink ? set.blink : set.open}
+        resizeMode="contain"
+        style={[
+          styles.img,
+          {
+            transform: [
+              { translateY },
+              { translateX },
+              { scale: breatheScale },
+              { scale: talkScale },
+              { rotate },
+            ],
+          },
+        ]}
+      />
 
-          {/* cuello */}
-          <Rect x="90" y="150" width="20" height="24" rx="8" fill={skin} />
+      {/* tinte de emoción sobre el personaje */}
+      <Animated.View
+        pointerEvents="none"
+        style={[
+          styles.tint,
+          {
+            backgroundColor: tint,
+            opacity: breathe.interpolate({ inputRange: [0, 1], outputRange: [0.05, 0.11] }),
+          },
+        ]}
+      />
 
-          {/* pelo trasero */}
-          <Path d="M46 108 C46 56 70 30 100 30 C130 30 154 56 154 108 L154 168 C154 176 146 180 140 174 L136 120 L64 120 L60 174 C54 180 46 176 46 168 Z" fill={hair} />
+      {/* velo de ropa: refleja el color de la prenda puesta */}
+      <LinearGradient
+        pointerEvents="none"
+        colors={['rgba(0,0,0,0)', `${top}55`, `${top}99`]}
+        locations={[0, 0.55, 1]}
+        style={styles.outfitVeil}
+      />
 
-          {/* cara */}
-          <Ellipse cx="100" cy="104" rx="46" ry="52" fill={skin} />
-          {/* orejas */}
-          <Ellipse cx="54" cy="108" rx="7" ry="11" fill={skin} />
-          <Ellipse cx="146" cy="108" rx="7" ry="11" fill={skin} />
-
-          {/* rubor */}
-          {face.blush > 0.15 && (
-            <G opacity={face.blush * 0.55}>
-              <Ellipse cx="72" cy="122" rx="11" ry="6" fill="#A855F7" />
-              <Ellipse cx="128" cy="122" rx="11" ry="6" fill="#A855F7" />
-            </G>
-          )}
-
-          {/* cejas */}
-          <Path
-            d={`M70 ${browY} Q80 ${browY - 4 - face.brow * 3} 90 ${browY + 1}`}
-            stroke={hair}
-            strokeWidth="3"
-            strokeLinecap="round"
-            fill="none"
-          />
-          <Path
-            d={`M110 ${browY + 1} Q120 ${browY - 4 - face.brow * 3} 130 ${browY}`}
-            stroke={hair}
-            strokeWidth="3"
-            strokeLinecap="round"
-            fill="none"
-          />
-
-          {/* ojos */}
-          <G>
-            <Ellipse cx="80" cy="110" rx="11" ry={13 * eyeOpen} fill="#FFFFFF" />
-            <Ellipse cx="120" cy="110" rx="11" ry={13 * eyeOpen} fill="#FFFFFF" />
-            <Ellipse cx="80" cy="110" rx="8" ry={10 * eyeOpen} fill={eye} />
-            <Ellipse cx="120" cy="110" rx="8" ry={10 * eyeOpen} fill={eye} />
-            <Ellipse cx="80" cy="110" rx="4" ry={5 * eyeOpen} fill="#05070F" />
-            <Ellipse cx="120" cy="110" rx="4" ry={5 * eyeOpen} fill="#05070F" />
-            <Circle cx="83" cy="106" r={2.4 * eyeOpen} fill="#FFFFFF" opacity={0.95} />
-            <Circle cx="123" cy="106" r={2.4 * eyeOpen} fill="#FFFFFF" opacity={0.95} />
-            {/* párpado superior */}
-            <Path d={`M69 ${110 - 13 * eyeOpen} Q80 ${104 - 13 * eyeOpen} 91 ${110 - 13 * eyeOpen}`} stroke="#2B2233" strokeWidth="2.4" fill="none" strokeLinecap="round" />
-            <Path d={`M109 ${110 - 13 * eyeOpen} Q120 ${104 - 13 * eyeOpen} 131 ${110 - 13 * eyeOpen}`} stroke="#2B2233" strokeWidth="2.4" fill="none" strokeLinecap="round" />
-          </G>
-
-          {/* nariz */}
-          <Path d="M100 118 L97 126 L102 126" stroke="#C99A7E" strokeWidth="1.6" fill="none" strokeLinecap="round" opacity={0.7} />
-
-          {/* boca */}
-          <Path
-            d={`M90 ${136 + mouthCurve * 0.2} Q100 ${136 + mouthCurve + mouthOpen} 110 ${136 + mouthCurve * 0.2}`}
-            stroke="#B5546B"
-            strokeWidth="2.6"
-            fill={mouthOpen > 2 ? '#B5546B' : 'none'}
-            strokeLinecap="round"
-          />
-
-          {/* flequillo */}
-          <Path d="M54 96 C58 56 76 34 100 34 C124 34 142 56 146 96 C138 78 128 70 118 74 C112 60 100 56 92 66 C84 58 70 66 66 82 C62 88 58 92 54 96 Z" fill={hair} />
-          <Path d="M100 34 C112 40 120 52 122 66 C116 58 108 54 100 56 Z" fill="#ffffff" opacity={0.12} />
-
-          {/* accesorio */}
-          {outfit?.accessory === 'auriculares' && (
-            <G>
-              <Path d="M52 100 Q52 62 100 62 Q148 62 148 100" stroke="#22D3EE" strokeWidth="4" fill="none" />
-              <Rect x="44" y="96" width="12" height="20" rx="6" fill="#22D3EE" />
-              <Rect x="144" y="96" width="12" height="20" rx="6" fill="#22D3EE" />
-            </G>
-          )}
-          {outfit?.accessory === 'collar' && <Circle cx="100" cy="176" r="4" fill="#FFD166" />}
-          {outfit?.accessory === 'bufanda' && (
-            <Path d="M74 164 Q100 178 126 164 L126 178 Q100 190 74 178 Z" fill="#A855F7" opacity={0.9} />
-          )}
-          {outfit?.accessory === 'muñequeras' && (
-            <G>
-              <Rect x="52" y="196" width="14" height="10" rx="4" fill="#E2E8F5" />
-              <Rect x="134" y="196" width="14" height="10" rx="4" fill="#E2E8F5" />
-            </G>
-          )}
-        </Svg>
-      </View>
-    </Animated.View>
+      {/* accesorio activo */}
+      {outfit?.accessory && outfit.accessory !== 'ninguno' ? (
+        <View style={[styles.accDot, { borderColor: `${top}cc` }]} />
+      ) : null}
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   wrap: { alignItems: 'center', justifyContent: 'center' },
+  halo: { position: 'absolute' },
+  img: { width: '100%', height: '100%' },
+  tint: { ...StyleSheet.absoluteFillObject, borderRadius: 999 },
+  outfitVeil: {
+    position: 'absolute',
+    left: '18%',
+    right: '18%',
+    bottom: '0%',
+    height: '18%',
+    borderRadius: 14,
+  },
+  accDot: {
+    position: 'absolute',
+    right: '14%',
+    bottom: '8%',
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    borderWidth: 1.5,
+    backgroundColor: 'rgba(5,7,15,0.6)',
+  },
 });

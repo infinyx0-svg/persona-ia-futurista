@@ -9,3 +9,4 @@ web-build/
 .env.local
 android/
 ios/
+node_modules

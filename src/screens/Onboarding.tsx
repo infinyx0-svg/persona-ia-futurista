@@ -241,6 +241,13 @@ export function OnboardingScreen() {
             cambiarla reinicia recuerdos y relación.
           </Sub>
 
+          <View style={{ alignItems: 'center', marginBottom: spacing(4) }}>
+            <AnimeAvatar character={previewCharacter} emotion="curiosa" size={200} />
+            <Text style={styles.avatarHint}>
+              Su personaje 3D cambia según la personalidad que elijas.
+            </Text>
+          </View>
+
           <Label>Punto de partida</Label>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: spacing(4) }}>
             {PRESETS.map((p) => (
@@ -406,6 +413,13 @@ const styles = StyleSheet.create({
   },
   presetName: { color: palette.text, fontWeight: '700', fontSize: 14, marginBottom: spacing(1) },
   presetBlurb: { color: palette.textFaint, fontSize: 12, lineHeight: 17 },
+  avatarHint: {
+    color: palette.textFaint,
+    fontSize: 11.5,
+    marginTop: spacing(2),
+    textAlign: 'center',
+    lineHeight: 16,
+  },
   traitRow: {
     flexDirection: 'row',
     alignItems: 'center',
