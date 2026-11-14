@@ -53,7 +53,7 @@ npx expo start --web
 ### Generar un APK instalable (Android)
 
 > **APK ya compilado y publicado:** el APK de release está adjunto como asset de
-> la **Release v1.0.0** de este repositorio. El enlace es **permanente** (no
+> la **Release `apk-latest`** de este repositorio. El enlace es **permanente** (no
 > caduca). No necesitas compilar nada para probarlo en el teléfono.
 
 Hay **tres vías** para obtener el APK. La primera ya está hecha.
@@ -62,23 +62,27 @@ Hay **tres vías** para obtener el APK. La primera ya está hecha.
 
 | Dato | Valor |
 |---|---|
-| **Página de la Release** | **https://github.com/infinyx0-svg/persona-ia-futurista/releases/tag/v1.0.0** |
-| **Descarga directa del APK** | **https://github.com/infinyx0-svg/persona-ia-futurista/releases/download/v1.0.0/persona-ia-1.0.0.apk** |
-| Archivo | `persona-ia-1.0.0.apk` |
-| Tamaño | **60,9 MB** (63 894 537 bytes) |
-| Versión | `1.0.0` (versionCode `1`) |
+| **Página de la Release** | **https://github.com/infinyx0-svg/persona-ia-futurista/releases/tag/apk-latest** |
+| **Descarga directa del APK** | **https://github.com/infinyx0-svg/persona-ia-futurista/releases/download/apk-latest/persona-ia-1.2.0.apk** |
+| Archivo | `persona-ia-1.2.0.apk` |
+| Versión | `1.2.0` (versionCode `3`) |
 | Paquete | `com.personaia.app` |
 | SDK | Expo SDK 54 · React Native 0.81.5 |
 | Perfil | `preview` — `distribution: internal`, `android.buildType: apk` |
-| Firma | Keystore gestionado por EAS (creado en la nube) |
-| SHA-256 | `02f50276ef0a9c72bbd95056c32981277ba6aa9ebf3d547e59ffb4e664beb79a` |
-| Estado | ✅ publicado y verificado (HTTP 200, 63 894 537 bytes) |
+| Firma | Keystore del proyecto (`keystore/release.keystore`) |
+| Contenido | **5 personajes 3D estilo VTuber** (`assets/vtuber/`) con animación |
 
 Abre el enlace de descarga directa y el `.apk` empieza a bajar. Después sigue
 "Instalar el APK en el teléfono" abajo.
 
 > El enlace de la Release **no caduca**. El artefacto original de EAS sí caducaba
 > a los 14 días; por eso el APK se movió a la Release del repositorio.
+
+> **Versión 1.2.0 — personajes 3D.** Esta versión sustituye los avatares 2D
+> vectoriales por renders 3D de anime VTuber en **todas** las pantallas: chat,
+> creación del personaje, galería de personajes, En persona y armario. Cada
+> personaje tiene dos fotogramas (ojos abiertos y parpadeo) y se anima con
+> respiración, balanceo de cabeza, parpadeo y pulso al hablar.
 
 #### 2.2 Recompilar con EAS Build
 
