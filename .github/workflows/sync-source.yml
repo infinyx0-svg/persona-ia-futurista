@@ -1,0 +1,73 @@
+name: Sync source
+
+# Sincroniza el codigo fuente del proyecto en la rama main a partir de un ZIP
+# publico. Se lanza a mano: Actions -> Sync source -> Run workflow.
+# NO toca .github/ (el GITHUB_TOKEN no puede modificar workflows).
+on:
+  workflow_dispatch:
+    inputs:
+      zip_url:
+        description: 'URL publica del ZIP con el codigo fuente'
+        required: true
+      message:
+        description: 'Mensaje de commit'
+        required: false
+        default: 'chore: sync source'
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    name: Sincronizar codigo
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Descargar el repositorio
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Descargar y extraer el ZIP
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/src
+          curl -L --fail --retry 3 --retry-delay 5 -o /tmp/src.zip "${{ github.event.inputs.zip_url }}"
+          file /tmp/src.zip
+          unzip -q -o /tmp/src.zip -d /tmp/src
+          echo "--- raiz extraida ---"
+          ls -la /tmp/src | head -40
+
+      - name: Copiar los archivos al repositorio
+        run: |
+          set -euo pipefail
+          ROOT=/tmp/src
+          if [ ! -f "$ROOT/app.json" ]; then
+            ROOT="$(find /tmp/src -maxdepth 3 -name app.json -printf '%h\n' | head -1)"
+          fi
+          echo "ROOT=$ROOT"
+          test -f "$ROOT/app.json"
+          # se conservan .git y .github
+          find . -mindepth 1 -maxdepth 1 -not -name '.git' -not -name '.github' -exec rm -rf {} +
+          cp -a "$ROOT"/. .
+          rm -rf .github node_modules android/.gradle android/build android/app/build
+          echo "--- archivos clave ---"
+          ls -la
+          echo "--- assets 3D ---"
+          ls -la assets/vtuber
+          test -f assets/vtuber/dulce.jpg
+          test -f src/components/AnimeAvatar.tsx
+          grep -q "assets/vtuber" src/components/AnimeAvatar.tsx
+
+      - name: Commit y push
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "Sin cambios que confirmar"
+          else
+            git commit -m "${{ github.event.inputs.message }}"
+            git push origin HEAD:main
+          fi
