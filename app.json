@@ -2,7 +2,7 @@
   "expo": {
     "name": "Persona IA",
     "slug": "persona-ia",
-    "version": "2.0.0",
+    "version": "2.0.1",
     "orientation": "portrait",
     "scheme": "personaia",
     "userInterfaceStyle": "dark",
@@ -11,7 +11,7 @@
     "assetBundlePatterns": ["**/*"],
     "android": {
       "package": "com.personaia.app",
-      "versionCode": 4,
+      "versionCode": 5,
       "edgeToEdgeEnabled": true,
       "permissions": ["RECORD_AUDIO", "MODIFY_AUDIO_SETTINGS", "INTERNET"],
       "adaptiveIcon": { "backgroundColor": "#07060F" }
