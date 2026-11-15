@@ -1,6 +1,6 @@
 {
   "name": "persona-ia",
-  "version": "1.2.0",
+  "version": "2.0.0",
   "main": "index.ts",
   "private": true,
   "scripts": {
@@ -8,30 +8,32 @@
     "android": "expo run:android",
     "web": "expo start --web",
     "typecheck": "tsc --noEmit",
-    "doctor": "npx expo-doctor",
-    "ios": "expo run:ios"
+    "build:viewer": "node viewer/build.mjs"
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "2.2.0",
-    "@supabase/supabase-js": "^2.119.0",
     "expo": "~54.0.38",
-    "expo-battery": "~10.0.7",
+    "expo-asset": "~12.0.9",
+    "expo-audio": "~1.0.13",
     "expo-constants": "~18.0.9",
-    "expo-device": "~8.0.9",
+    "expo-document-picker": "~14.0.7",
+    "expo-file-system": "~19.0.17",
     "expo-haptics": "~15.0.7",
     "expo-linear-gradient": "~15.0.7",
-    "expo-speech": "~14.0.7",
     "expo-status-bar": "~3.0.8",
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "react-native": "0.81.5",
     "react-native-safe-area-context": "~5.6.0",
     "react-native-svg": "15.12.1",
-    "react-native-url-polyfill": "^2.0.0",
-    "react-native-web": "^0.21.0"
+    "react-native-web": "^0.21.0",
+    "react-native-webview": "13.15.0"
   },
   "devDependencies": {
     "@types/react": "~19.1.10",
+    "esbuild": "^0.28.2",
+    "three": "^0.180.0",
+    "@pixiv/three-vrm": "^3.5.5",
     "typescript": "~5.9.2"
   }
 }
