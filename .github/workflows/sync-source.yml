@@ -1,0 +1,75 @@
+name: Sync source
+
+# Sube al repositorio el arbol de codigo de un ZIP publicado en una URL.
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_url:
+        description: 'URL publica del ZIP con el codigo'
+        required: true
+        type: string
+      message:
+        description: 'Mensaje del commit'
+        required: false
+        type: string
+        default: 'chore: sincronizar codigo fuente'
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    name: Sincronizar
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Descargar y verificar el ZIP
+        run: |
+          set -euo pipefail
+          curl -fsSL --retry 3 --retry-delay 2 -o /tmp/src.zip "${{ inputs.source_url }}"
+          ls -lh /tmp/src.zip
+          if [ "$(head -c 2 /tmp/src.zip)" != "PK" ]; then
+            echo "ERROR: la URL no devolvio un ZIP"
+            head -c 300 /tmp/src.zip || true
+            exit 1
+          fi
+          unzip -l /tmp/src.zip | tail -30
+
+      - name: Aplicar los archivos
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/src && mkdir -p /tmp/src
+          unzip -q /tmp/src.zip -d /tmp/src
+          find . -mindepth 1 -maxdepth 1 ! -name '.git' ! -name '.github' -exec rm -rf {} +
+          (cd /tmp/src && find . -mindepth 1 -maxdepth 1 ! -name '.github' -exec cp -r {} "$GITHUB_WORKSPACE/" \;)
+          find . -path ./.git -prune -o -type f -print | sort
+
+      - name: Verificar piezas clave
+        run: |
+          set -euo pipefail
+          for f in App.tsx package.json app.json viewer/src/main.ts \
+                   src/components/Avatar3D.tsx src/engine/voice.ts \
+                   src/engine/personality.ts tools/optimize_vrm.py; do
+            if [ ! -f "$f" ]; then echo "FALTA $f"; exit 1; fi
+          done
+          echo 'Todas las piezas clave presentes'
+          node -p "require('./app.json').expo.version" | sed 's/^/version: /'
+          grep -q 'expo-speech' package.json && echo 'expo-speech OK'
+
+      - name: Commit y push
+        run: |
+          set -euo pipefail
+          git config user.name  'persona-ia-bot'
+          git config user.email 'bot@users.noreply.github.com'
+          git add -A
+          if git diff --cached --quiet; then
+            echo 'Sin cambios'
+          else
+            git commit -m "${{ inputs.message }}"
+            git push origin HEAD:main
+            echo "PUSHED $(git rev-parse --short HEAD)"
+          fi
