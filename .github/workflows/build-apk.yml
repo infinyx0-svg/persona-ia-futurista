@@ -1,8 +1,5 @@
 name: Build APK
 
-# Compila el APK instalable de Persona IA y lo publica como Release descargable.
-# Se puede lanzar a mano (pestana Actions -> Build APK -> Run workflow)
-# o automaticamente al crear un tag v*.
 on:
   workflow_dispatch:
   push:
@@ -18,53 +15,53 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
-      - name: Descargar el codigo
-        uses: actions/checkout@v4
-
-      - name: Configurar Node.js 20
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: '20'
-
-      - name: Configurar JDK 17
-        uses: actions/setup-java@v4
+      - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
-
-      # El runner ubuntu-latest ya trae el Android SDK completo (platform-tools,
-      # platforms, build-tools, ndk) en /usr/local/lib/android/sdk. Solo hay que
-      # exportar las variables: no se instala nada ni se hace chmod (el SDK es
-      # de root y chmod falla con "Operation not permitted").
-      - name: Configurar Android SDK (preinstalado en el runner)
+      - name: Android SDK
         run: |
           set -euo pipefail
           SDK="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-/usr/local/lib/android/sdk}}"
           echo "ANDROID_SDK_ROOT=$SDK" >> "$GITHUB_ENV"
           echo "ANDROID_HOME=$SDK" >> "$GITHUB_ENV"
-          echo "SDK en: $SDK"
-          ls "$SDK"
-          echo "--- platforms ---"
-          ls "$SDK/platforms" || true
-          echo "--- build-tools ---"
-          ls "$SDK/build-tools" || true
-
-      - name: Instalar dependencias
+          SDKMGR="$(find "$SDK/cmdline-tools" -name sdkmanager -type f 2>/dev/null | head -1)"
+          if [ -z "$SDKMGR" ]; then
+            mkdir -p "$SDK/cmdline-tools"
+            curl -fsSL -o /tmp/cmdline.zip https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
+            unzip -q -o /tmp/cmdline.zip -d /tmp/cmdline
+            mv /tmp/cmdline/cmdline-tools "$SDK/cmdline-tools/latest"
+            SDKMGR="$SDK/cmdline-tools/latest/bin/sdkmanager"
+          fi
+          chmod +x "$SDKMGR"
+          yes | "$SDKMGR" --licenses > /dev/null 2>&1 || true
+          "$SDKMGR" --install "platform-tools" "platforms;android-36" "build-tools;36.0.0" > /dev/null
+      - name: Dependencias
         run: npm install --no-audit --no-fund
-
+      - name: Descargar y optimizar el VRM
+        run: |
+          set -euo pipefail
+          pip install --quiet pillow
+          mkdir -p assets/vrm
+          curl -fsSL -o assets/vrm/avatar.vrm https://raw.githubusercontent.com/madjin/vrm-samples/master/vroid/stable/AvatarSample_A.vrm
+          python3 tools/optimize_vrm.py assets/vrm/avatar.vrm assets/vrm/avatar_opt.vrm
+          ls -lh assets/vrm/
+      - name: Compilar el visor 3D
+        run: node viewer/build.mjs
       - name: Comprobar tipos
         run: npx tsc --noEmit
-
-      - name: Generar proyecto Android nativo
+      - name: Prebuild Android
         run: npx expo prebuild --clean -p android --no-install
-
-      - name: Compilar APK de release
+      - name: Compilar APK
         run: |
           cd android
           chmod +x gradlew
           ./gradlew assembleRelease --no-daemon --stacktrace
-
-      - name: Renombrar APK
+      - name: Renombrar y verificar
         run: |
           set -euo pipefail
           VERSION="$(node -p "require('./app.json').expo.version")"
@@ -72,33 +69,30 @@ jobs:
           mkdir -p dist
           cp android/app/build/outputs/apk/release/*.apk "dist/persona-ia-${VERSION}.apk"
           ls -lh dist/
-          echo "--- contenido 3D en el APK ---"
-          unzip -l "dist/persona-ia-${VERSION}.apk" | grep -i "vtuber" || echo "AVISO: no se encontraron assets vtuber"
-
-      - name: Subir APK como artefacto
-        uses: actions/upload-artifact@v4
+          unzip -l "dist/persona-ia-${VERSION}.apk" | grep -i vrm || echo "AVISO: sin VRM"
+      - uses: actions/upload-artifact@v4
         with:
           name: persona-ia-apk
           path: dist/*.apk
           if-no-files-found: error
-
-      - name: Publicar Release con el APK
+      - name: Publicar Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || 'apk-latest' }}
           name: Persona IA ${{ env.VERSION }} - APK Android
           body: |
-            APK instalable de **Persona IA** con los **personajes 3D estilo VTuber anime**.
+            APK instalable de **Persona IA** (reconstruida desde cero).
 
-            - Version de la app: ${{ env.VERSION }}
+            - Version: ${{ env.VERSION }}
             - Paquete: com.personaia.app
             - Requisitos: Android 8.0 (API 26) o superior
-            - Arquitecturas: arm64-v8a, armeabi-v7a
-            - Incluye los 5 personajes 3D (dulce, chispa, serena, filo, musa) con
-              animacion de respiracion, parpadeo, balanceo de cabeza y reaccion al hablar
 
-            Instalacion: descarga el .apk, activa "Instalar apps de origen desconocido"
-            y abre el archivo en el telefono.
+            Incluye personaje 3D real (VRM) con expresiones, respiracion, parpadeo
+            y movimiento de cabeza; voz realista (ElevenLabs/OpenAI); conversacion
+            con memoria; personalidad que evoluciona; modo celular y modo persona.
+
+            Instalacion: descarga el .apk, activa "Instalar apps de origen
+            desconocido" y abre el archivo en el telefono.
           files: dist/*.apk
           draft: false
           prerelease: false
