@@ -1,12 +1,11 @@
 node_modules/
 .expo/
-.expo-shared/
 dist/
-web-build/
-*.log
-.DS_Store
-.env
-.env.local
 android/
 ios/
-node_modules
+*.log
+.DS_Store
+# generado por viewer/build.mjs en cada compilacion
+src/components/viewerHtml.ts
+# el VRM se descarga y optimiza en el workflow
+assets/vrm/*.vrm

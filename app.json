@@ -2,45 +2,28 @@
   "expo": {
     "name": "Persona IA",
     "slug": "persona-ia",
-    "version": "1.2.0",
+    "version": "2.0.0",
     "orientation": "portrait",
     "scheme": "personaia",
     "userInterfaceStyle": "dark",
     "newArchEnabled": true,
-    "backgroundColor": "#0E0B16",
-    "assetBundlePatterns": [
-      "**/*"
-    ],
+    "backgroundColor": "#07060F",
+    "assetBundlePatterns": ["**/*"],
     "android": {
       "package": "com.personaia.app",
-      "versionCode": 3,
+      "versionCode": 4,
       "edgeToEdgeEnabled": true,
-      "permissions": [
-        "RECORD_AUDIO",
-        "MODIFY_AUDIO_SETTINGS"
-      ],
-      "adaptiveIcon": {
-        "backgroundColor": "#0E0B16"
-      }
+      "permissions": ["RECORD_AUDIO", "MODIFY_AUDIO_SETTINGS", "INTERNET"],
+      "adaptiveIcon": { "backgroundColor": "#07060F" }
     },
     "ios": {
       "bundleIdentifier": "com.personaia.app",
-      "supportsTablet": true,
-      "infoPlist": {
-        "NSMicrophoneUsageDescription": "Persona IA usa el micrófono para que puedas hablar con tu compañera en el modo En persona."
-      }
+      "supportsTablet": true
     },
-    "web": {
-      "bundler": "metro",
-      "output": "single"
-    },
-    "plugins": [],
+    "web": { "bundler": "metro", "output": "single" },
+    "plugins": ["expo-audio"],
     "extra": {
-      "supabaseUrl": "",
-      "supabaseAnonKey": "",
-      "eas": {
-        "projectId": "96caacef-0bd9-4568-89ef-a6d33e56672f"
-      }
+      "eas": { "projectId": "96caacef-0bd9-4568-89ef-a6d33e56672f" }
     },
     "owner": "winterark90"
   }

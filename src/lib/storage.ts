@@ -1,144 +1,85 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { AppData, Settings, UserProfile } from '../types';
+import {
+  DEFAULT_SETTINGS,
+  DEFAULT_TRAITS,
+  type Message,
+  type PersonaState,
+  type Settings,
+} from '../types';
 
-const KEY_PREFIX = 'personaia:v1:';
-const dataKey = (uid: string) => `${KEY_PREFIX}data:${uid}`;
-const sessionKey = `${KEY_PREFIX}session`;
-const localUsersKey = `${KEY_PREFIX}localusers`;
-
-export const defaultSettings: Settings = {
-  perfMode: 'equilibrado',
-  storageMode: 'ligero',
-  reasoning: 'normal',
-  control: 'equilibrado',
-  voice: 'natural',
-  voiceRate: 0.95,
-  subtitles: false,
-  allowFamilyContact: true,
-  allowSecondarySpontaneous: true,
-  theme: 'noche',
-  haptics: true,
-  llm: { provider: 'openai', apiKey: '', model: '', baseUrl: '' },
+const K = {
+  settings: 'pia.settings.v2',
+  persona: 'pia.persona.v2',
+  messages: 'pia.messages.v2',
+  onboarded: 'pia.onboarded.v2',
 };
 
-export function emptyData(user: UserProfile | null = null): AppData {
-  const now = Date.now();
+export async function loadSettings(): Promise<Settings> {
+  try {
+    const raw = await AsyncStorage.getItem(K.settings);
+    if (!raw) return { ...DEFAULT_SETTINGS };
+    return { ...DEFAULT_SETTINGS, ...JSON.parse(raw) };
+  } catch {
+    return { ...DEFAULT_SETTINGS };
+  }
+}
+
+export async function saveSettings(s: Settings): Promise<void> {
+  await AsyncStorage.setItem(K.settings, JSON.stringify(s));
+}
+
+export function newPersona(name = 'Aria'): PersonaState {
   return {
-    version: 1,
-    user,
-    primary: null,
-    secondary: [],
-    messages: [],
-    memories: [],
-    relationship: {
-      stage: 'desconocidos',
-      trust: 5,
-      affection: 5,
-      tension: 0,
-      romanticInterest: 0,
-      history: [],
-      partnerConfirmed: false,
-    },
-    emotion: {
-      key: 'curiosa',
-      intensity: 0.4,
-      cause: 'Primer día',
-      updatedAt: now,
-    },
-    wardrobe: { outfits: [], currentOutfitId: '', pendingProposalId: null, lastChangeAt: now },
-    world: null,
-    settings: { ...defaultSettings, llm: { ...defaultSettings.llm } },
-    onboardingStep: 'user_profile',
-    deviceReport: null,
-    createdAt: now,
-    updatedAt: now,
+    name,
+    traits: { ...DEFAULT_TRAITS },
+    bond: 'Todavía no nos conocemos.',
+    trust: 0.1,
+    turns: 0,
+    facts: [],
+    stage: 'desconocidos',
   };
 }
 
-export async function loadData(uid: string): Promise<AppData | null> {
-  const raw = await AsyncStorage.getItem(dataKey(uid));
-  if (!raw) return null;
+export async function loadPersona(): Promise<PersonaState> {
   try {
-    const parsed = JSON.parse(raw) as AppData;
-    const mergedSettings: Settings = {
-      ...defaultSettings,
-      ...parsed.settings,
-      llm: { ...defaultSettings.llm, ...(parsed.settings?.llm ?? {}) },
-    };
-    return { ...emptyData(parsed.user), ...parsed, settings: mergedSettings };
+    const raw = await AsyncStorage.getItem(K.persona);
+    if (!raw) return newPersona();
+    const p = JSON.parse(raw);
+    return { ...newPersona(), ...p, traits: { ...DEFAULT_TRAITS, ...(p.traits || {}) } };
   } catch {
-    return null;
+    return newPersona();
   }
 }
 
-export async function saveData(uid: string, data: AppData): Promise<void> {
-  const payload: AppData = { ...data, updatedAt: Date.now() };
-  await AsyncStorage.setItem(dataKey(uid), JSON.stringify(payload));
+export async function savePersona(p: PersonaState): Promise<void> {
+  await AsyncStorage.setItem(K.persona, JSON.stringify(p));
 }
 
-export async function clearData(uid: string): Promise<void> {
-  await AsyncStorage.removeItem(dataKey(uid));
-}
-
-export async function saveSession(session: unknown): Promise<void> {
-  await AsyncStorage.setItem(sessionKey, JSON.stringify(session));
-}
-
-export async function readSession<T>(): Promise<T | null> {
-  const raw = await AsyncStorage.getItem(sessionKey);
-  if (!raw) return null;
+export async function loadMessages(): Promise<Message[]> {
   try {
-    return JSON.parse(raw) as T;
-  } catch {
-    return null;
-  }
-}
-
-export async function clearSession(): Promise<void> {
-  await AsyncStorage.removeItem(sessionKey);
-}
-
-// ---- Almacén local de credenciales (modo sin Supabase) ----
-export interface LocalUserRecord {
-  id: string;
-  email: string;
-  salt: string;
-  hash: string;
-  createdAt: number;
-}
-
-function simpleHash(input: string): string {
-  // Hash determinista ligero (FNV-1a de 64 bits en hex). No es criptográfico:
-  // el modo local es para desarrollo/pruebas; producción usa Supabase Auth.
-  let h1 = 0x811c9dc5;
-  let h2 = 0x01000193;
-  for (let i = 0; i < input.length; i++) {
-    const c = input.charCodeAt(i);
-    h1 ^= c;
-    h1 = Math.imul(h1, 0x01000193) >>> 0;
-    h2 = (Math.imul(h2 ^ c, 0x85ebca6b) + i) >>> 0;
-  }
-  return h1.toString(16).padStart(8, '0') + h2.toString(16).padStart(8, '0');
-}
-
-export function makeSalt(): string {
-  return Math.random().toString(36).slice(2) + Date.now().toString(36);
-}
-
-export function hashPassword(password: string, salt: string): string {
-  return simpleHash(`${salt}::${password}::personaia`);
-}
-
-export async function readLocalUsers(): Promise<LocalUserRecord[]> {
-  const raw = await AsyncStorage.getItem(localUsersKey);
-  if (!raw) return [];
-  try {
-    return JSON.parse(raw) as LocalUserRecord[];
+    const raw = await AsyncStorage.getItem(K.messages);
+    if (!raw) return [];
+    const arr = JSON.parse(raw);
+    return Array.isArray(arr) ? arr : [];
   } catch {
     return [];
   }
 }
 
-export async function writeLocalUsers(users: LocalUserRecord[]): Promise<void> {
-  await AsyncStorage.setItem(localUsersKey, JSON.stringify(users));
+export async function saveMessages(m: Message[]): Promise<void> {
+  // guardamos solo los ultimos 400 para no crecer sin limite
+  const trimmed = m.slice(-400);
+  await AsyncStorage.setItem(K.messages, JSON.stringify(trimmed));
+}
+
+export async function isOnboarded(): Promise<boolean> {
+  return (await AsyncStorage.getItem(K.onboarded)) === '1';
+}
+
+export async function setOnboarded(): Promise<void> {
+  await AsyncStorage.setItem(K.onboarded, '1');
+}
+
+export async function resetAll(): Promise<void> {
+  await AsyncStorage.multiRemove([K.settings, K.persona, K.messages, K.onboarded]);
 }

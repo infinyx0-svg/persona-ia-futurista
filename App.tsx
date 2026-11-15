@@ -1,175 +1,206 @@
-import React, { useEffect, useRef } from 'react';
-import { ActivityIndicator, Animated, Easing, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import React, { useCallback, useEffect, useState } from 'react';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { AppProvider, useApp } from './src/state/AppContext';
-import { WelcomeScreen, SignUpScreen, LoginScreen } from './src/screens/Auth';
-import { OnboardingScreen } from './src/screens/Onboarding';
-import { ChatScreen } from './src/screens/Chat';
-import { PersonaScreen } from './src/screens/Persona';
-import { MenteScreen } from './src/screens/Mente';
-import { ArmarioScreen } from './src/screens/Armario';
-import { SecundariosScreen } from './src/screens/Secundarios';
-import { AjustesScreen } from './src/screens/Ajustes';
-import { AuroraBackground } from './src/components/AuroraBackground';
-import { glow, palette, spacing } from './src/theme';
-import { Tab } from './src/state/AppContext';
+import { LinearGradient } from 'expo-linear-gradient';
 
-const TABS: { key: Tab; label: string; icon: string }[] = [
-  { key: 'chat', label: 'Teléfono', icon: '💬' },
-  { key: 'persona', label: 'En persona', icon: '🎙️' },
-  { key: 'mente', label: 'Mente', icon: '🧠' },
-  { key: 'gente', label: 'Gente', icon: '👥' },
-  { key: 'armario', label: 'Armario', icon: '👗' },
-  { key: 'ajustes', label: 'Ajustes', icon: '⚙️' },
-];
+import PhoneMode from './src/screens/PhoneMode';
+import PersonaMode from './src/screens/PersonaMode';
+import SettingsScreen from './src/screens/SettingsScreen';
+import Onboarding from './src/screens/Onboarding';
 
-function TabBar() {
-  const { tab, setTab, data } = useApp();
+import { C, GRAD } from './src/theme';
+import type { Emotion, Message, PersonaState, Settings } from './src/types';
+import {
+  isOnboarded,
+  loadMessages,
+  loadPersona,
+  loadSettings,
+  newPersona,
+  resetAll,
+  saveMessages,
+  savePersona,
+  saveSettings,
+  setOnboarded,
+} from './src/lib/storage';
+import { stop as stopVoice } from './src/engine/voice';
+
+type Tab = 'phone' | 'persona' | 'settings';
+
+function Shell() {
   const insets = useSafeAreaInsets();
-  return (
-    <View style={[styles.tabBar, { paddingBottom: Math.max(insets.bottom, spacing(2)) }]}>
-      <LinearGradient
-        colors={['rgba(76,141,255,0.55)', 'rgba(168,85,247,0.45)', 'rgba(34,211,238,0.25)']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 0 }}
-        style={styles.tabEdge}
-      />
-      {TABS.map((t) => {
-        const active = tab === t.key;
-        return (
-          <Pressable key={t.key} onPress={() => setTab(t.key)} style={styles.tabItem}>
-            {active ? (
-              <LinearGradient
-                colors={['rgba(76,141,255,0.28)', 'rgba(168,85,247,0.18)']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.tabActive}
-              />
-            ) : null}
-            <Text style={{ fontSize: 19, opacity: active ? 1 : 0.55 }}>{t.icon}</Text>
-            <Text style={[styles.tabLabel, active && { color: palette.accentSoft }]}>{t.label}</Text>
-            {active ? <View style={styles.tabDot} /> : null}
-          </Pressable>
-        );
-      })}
-    </View>
-  );
-}
+  const [booting, setBooting] = useState(true);
+  const [onboarded, setOnb] = useState(false);
+  const [tab, setTab] = useState<Tab>('phone');
 
-function MainShell() {
-  const { tab, data } = useApp();
-  return (
-    <View style={{ flex: 1, backgroundColor: palette.bg }}>
-      <View style={{ flex: 1 }}>
-        {tab === 'chat' ? <ChatScreen /> : null}
-        {tab === 'persona' ? <PersonaScreen /> : null}
-        {tab === 'mente' ? <MenteScreen /> : null}
-        {tab === 'gente' ? <SecundariosScreen /> : null}
-        {tab === 'armario' ? <ArmarioScreen /> : null}
-        {tab === 'ajustes' ? <AjustesScreen /> : null}
-      </View>
-      <TabBar />
-    </View>
-  );
-}
+  const [settings, setSettings] = useState<Settings | null>(null);
+  const [persona, setPersona] = useState<PersonaState>(newPersona());
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [emotion, setEmotion] = useState<Emotion>('neutral');
+  const [speaking, setSpeaking] = useState(false);
 
-function BootScreen() {
-  const pulse = useRef(new Animated.Value(0)).current;
+  // ---------------------------------------------------------------- arranque
   useEffect(() => {
-    const loop = Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulse, { toValue: 1, duration: 1600, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
-        Animated.timing(pulse, { toValue: 0, duration: 1600, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
-      ]),
-    );
-    loop.start();
-    return () => loop.stop();
-  }, [pulse]);
+    (async () => {
+      const [s, p, m, ob] = await Promise.all([
+        loadSettings(),
+        loadPersona(),
+        loadMessages(),
+        isOnboarded(),
+      ]);
+      setSettings(s);
+      setPersona(p);
+      setMessages(m);
+      setOnb(ob);
+      const last = [...m].reverse().find((x) => x.role === 'persona');
+      if (last?.emotion) setEmotion(last.emotion);
+      setBooting(false);
+    })();
+  }, []);
 
-  const scale = pulse.interpolate({ inputRange: [0, 1], outputRange: [0.94, 1.06] });
-  const opacity = pulse.interpolate({ inputRange: [0, 1], outputRange: [0.55, 1] });
+  // ---------------------------------------------------------------- acciones
+  const update = useCallback((p: PersonaState, m: Message[]) => {
+    setPersona(p);
+    setMessages(m);
+    savePersona(p);
+    saveMessages(m);
+  }, []);
+
+  const saveS = useCallback((s: Settings) => {
+    setSettings(s);
+    saveSettings(s);
+  }, []);
+
+  const finishOnboarding = useCallback(
+    async (s: Settings, name: string) => {
+      const p = newPersona(name);
+      setSettings(s);
+      setPersona(p);
+      setMessages([]);
+      await Promise.all([saveSettings(s), savePersona(p), saveMessages([]), setOnboarded()]);
+      setOnb(true);
+      setTab('phone');
+    },
+    []
+  );
+
+  const doReset = useCallback(async () => {
+    stopVoice();
+    await resetAll();
+    setSettings(null);
+    setPersona(newPersona());
+    setMessages([]);
+    setEmotion('neutral');
+    setOnb(false);
+    setTab('phone');
+  }, []);
+
+  const switchTab = useCallback((t: Tab) => {
+    if (t !== 'persona') stopVoice();
+    setTab(t);
+  }, []);
+
+  // ---------------------------------------------------------------- render
+  if (booting || !settings) {
+    return (
+      <View style={styles.boot}>
+        <LinearGradient colors={GRAD.aurora} style={StyleSheet.absoluteFill} />
+        <ActivityIndicator color={C.violet} size="large" />
+        <Text style={styles.bootText}>Persona IA</Text>
+      </View>
+    );
+  }
+
+  if (!onboarded) {
+    return <Onboarding onDone={finishOnboarding} />;
+  }
 
   return (
-    <View style={styles.boot}>
-      <AuroraBackground theme="noche" perfMode="completo" />
-      <Animated.View style={[styles.bootOrb, { transform: [{ scale }], opacity }]}>
-        <LinearGradient
-          colors={['#3B7BFF', '#7C4DFF', '#22D3EE']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={StyleSheet.absoluteFill}
-        />
-      </Animated.View>
-      <Text style={styles.bootText}>PERSONA IA</Text>
-      <ActivityIndicator color={palette.accentSoft} style={{ marginTop: spacing(6) }} />
+    <View style={styles.root}>
+      <StatusBar style="light" />
+
+      <View style={styles.body}>
+        {tab === 'phone' && (
+          <PhoneMode
+            persona={persona}
+            settings={settings}
+            messages={messages}
+            onUpdate={update}
+            onEmotion={setEmotion}
+            onSpeaking={setSpeaking}
+            onOpenPersona={() => switchTab('persona')}
+          />
+        )}
+
+        {tab === 'persona' && (
+          <PersonaMode
+            persona={persona}
+            settings={settings}
+            messages={messages}
+            emotion={emotion}
+            onUpdate={update}
+            onEmotion={setEmotion}
+            onBack={() => switchTab('phone')}
+          />
+        )}
+
+        {tab === 'settings' && (
+          <SettingsScreen
+            settings={settings}
+            persona={persona}
+            onSave={saveS}
+            onBack={() => switchTab('phone')}
+            onReset={doReset}
+          />
+        )}
+      </View>
+
+      {/* barra inferior: solo en modo celular */}
+      {tab === 'phone' && (
+        <View style={[styles.tabBar, { paddingBottom: Math.max(insets.bottom, 10) }]}>
+          <Pressable onPress={() => switchTab('phone')} style={styles.tabItem}>
+            <Text style={[styles.tabIcon, styles.tabOn]}>💬</Text>
+            <Text style={[styles.tabLabel, styles.tabOn]}>Chat</Text>
+          </Pressable>
+
+          <Pressable onPress={() => switchTab('persona')} style={styles.tabItem}>
+            <Text style={styles.tabIcon}>🧍</Text>
+            <Text style={styles.tabLabel}>En persona</Text>
+          </Pressable>
+
+          <Pressable onPress={() => switchTab('settings')} style={styles.tabItem}>
+            <Text style={styles.tabIcon}>⚙️</Text>
+            <Text style={styles.tabLabel}>Ajustes</Text>
+          </Pressable>
+        </View>
+      )}
     </View>
   );
-}
-
-function Router() {
-  const { ready, route } = useApp();
-
-  if (!ready) return <BootScreen />;
-
-  if (route === 'welcome') return <WelcomeScreen />;
-  if (route === 'signup') return <SignUpScreen />;
-  if (route === 'login') return <LoginScreen />;
-  if (route === 'onboarding') return <OnboardingScreen />;
-  return <MainShell />;
 }
 
 export default function App() {
   return (
     <SafeAreaProvider>
-      <StatusBar style="light" />
-      <AppProvider>
-        <Router />
-      </AppProvider>
+      <Shell />
     </SafeAreaProvider>
   );
 }
 
 const styles = StyleSheet.create({
-  boot: { flex: 1, backgroundColor: palette.bg, alignItems: 'center', justifyContent: 'center' },
-  bootOrb: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
-    overflow: 'hidden',
-    ...glow('#4C8DFF', 30),
-  },
-  bootText: {
-    color: palette.text,
-    marginTop: spacing(6),
-    fontSize: 15,
-    letterSpacing: 6,
-    fontWeight: '800',
-  },
+  root: { flex: 1, backgroundColor: C.bg },
+  body: { flex: 1 },
+  boot: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 16, backgroundColor: C.bg },
+  bootText: { color: C.violetSoft, fontSize: 15, letterSpacing: 3, fontWeight: '700' },
+
   tabBar: {
     flexDirection: 'row',
-    backgroundColor: 'rgba(6,9,20,0.94)',
+    backgroundColor: C.panel,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(120,160,255,0.16)',
-    paddingTop: spacing(2),
+    borderTopColor: C.borderSoft,
+    paddingTop: 8,
   },
-  tabEdge: { position: 'absolute', top: 0, left: 0, right: 0, height: 1 },
-  tabItem: {
-    flex: 1,
-    alignItems: 'center',
-    paddingVertical: spacing(1.5),
-    marginHorizontal: 2,
-    borderRadius: 14,
-    overflow: 'hidden',
-  },
-  tabActive: { ...StyleSheet.absoluteFillObject, borderRadius: 14 },
-  tabLabel: { color: palette.textFaint, fontSize: 9, marginTop: 2, fontWeight: '700' },
-  tabDot: {
-    width: 4,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: palette.accent3,
-    marginTop: 3,
-  },
+  tabItem: { flex: 1, alignItems: 'center', gap: 3 },
+  tabIcon: { fontSize: 19, opacity: 0.5 },
+  tabLabel: { color: C.textFaint, fontSize: 10.5, fontWeight: '600' },
+  tabOn: { opacity: 1, color: C.violetSoft },
 });
