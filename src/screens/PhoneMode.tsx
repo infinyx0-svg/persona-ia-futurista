@@ -11,6 +11,7 @@ import {
   View,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import Avatar3D from '../components/Avatar3D';
 import { C, GRAD, R } from '../theme';
 import type { Emotion, Message, PersonaState, Settings } from '../types';
 import { EMOTION_EMOJI } from '../types';
@@ -58,6 +59,8 @@ export default function PhoneMode({
   const [input, setInput] = useState('');
   const [typing, setTyping] = useState(false);
   const [error, setError] = useState('');
+  const [emotion, setEmotion] = useState<Emotion>('neutral');
+  const [speaking, setSpeaking] = useState(false);
   const listRef = useRef<FlatList<Message>>(null);
 
   const scrollDown = useCallback(() => {
@@ -82,6 +85,7 @@ export default function PhoneMode({
 
     setTyping(true);
     onEmotion('pensativa');
+    setEmotion('pensativa');
 
     try {
       const reply = await generateReply(persona, settings, messages, text);
@@ -116,14 +120,24 @@ export default function PhoneMode({
       const all = [...withUser, personaMsg];
       onUpdate(nextPersona, all);
       onEmotion(emotion);
+      setEmotion(emotion);
       scrollDown();
 
       // voz automatica despues de mostrar el texto
       if (settings.autoSpeak) {
         speak(reply.text, settings, {
-          onStart: () => onSpeaking(true),
-          onEnd: () => onSpeaking(false),
-          onError: () => onSpeaking(false),
+          onStart: () => {
+            onSpeaking(true);
+            setSpeaking(true);
+          },
+          onEnd: () => {
+            onSpeaking(false);
+            setSpeaking(false);
+          },
+          onError: () => {
+            onSpeaking(false);
+            setSpeaking(false);
+          },
         });
       }
     } catch (e: any) {
@@ -158,9 +172,9 @@ export default function PhoneMode({
       {/* cabecera tipo WhatsApp */}
       <View style={styles.header}>
         <Pressable onPress={onOpenPersona} style={styles.avatarBtn}>
-          <LinearGradient colors={GRAD.violet} style={styles.avatar}>
-            <Text style={styles.avatarLetter}>{persona.name.charAt(0)}</Text>
-          </LinearGradient>
+          <View style={styles.avatar}>
+            <Avatar3D emotion={emotion} speaking={speaking} zoom={1} compact />
+          </View>
           <View style={styles.onlineDot} />
         </Pressable>
 
@@ -256,13 +270,14 @@ const styles = StyleSheet.create({
   },
   avatarBtn: { position: 'relative' },
   avatar: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    alignItems: 'center',
-    justifyContent: 'center',
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    overflow: 'hidden',
+    backgroundColor: C.panel2,
+    borderWidth: 1,
+    borderColor: C.border,
   },
-  avatarLetter: { color: '#fff', fontSize: 18, fontWeight: '700' },
   onlineDot: {
     position: 'absolute',
     right: -1,

@@ -19,6 +19,8 @@ interface Props {
   speaking?: boolean;
   /** 0 = plano medio, 1 = primer plano */
   zoom?: number;
+  /** Encuadre de cara para avatares pequenos (cabecera del chat). */
+  compact?: boolean;
   onReady?: () => void;
   onError?: (msg: string) => void;
   style?: any;
@@ -33,7 +35,7 @@ const CHUNK = 400_000; // caracteres base64 por mensaje
  * trozos (un solo mensaje de 8 MB bloquea el puente de React Native).
  */
 const Avatar3D = forwardRef<Avatar3DHandle, Props>(function Avatar3D(
-  { emotion = 'neutral', speaking = false, zoom = 0, onReady, onError, style },
+  { emotion = 'neutral', speaking = false, zoom = 0, compact = false, onReady, onError, style },
   ref
 ) {
   const webRef = useRef<WebView>(null);
@@ -120,7 +122,8 @@ const Avatar3D = forwardRef<Avatar3DHandle, Props>(function Avatar3D(
         inject(
           `window.PersonaViewer.setEmotion(${JSON.stringify(pendingEmotion.current)});` +
             `window.PersonaViewer.setSpeaking(${pendingSpeaking.current});` +
-            `window.PersonaViewer.zoom(${zoom});`
+            `window.PersonaViewer.zoom(${zoom});` +
+            `window.PersonaViewer.compact(${compact});`
         );
       } else if (msg.type === 'error') {
         setErrMsg(String(msg.message ?? 'error'));
@@ -128,7 +131,7 @@ const Avatar3D = forwardRef<Avatar3DHandle, Props>(function Avatar3D(
         onError?.(String(msg.message ?? 'error'));
       }
     },
-    [inject, onReady, onError, sendVRM, zoom]
+    [inject, onReady, onError, sendVRM, zoom, compact]
   );
 
   useEffect(() => {
@@ -148,6 +151,12 @@ const Avatar3D = forwardRef<Avatar3DHandle, Props>(function Avatar3D(
       inject(`window.PersonaViewer && window.PersonaViewer.zoom(${zoom})`);
     }
   }, [zoom, status, inject]);
+
+  useEffect(() => {
+    if (status === 'ready') {
+      inject(`window.PersonaViewer && window.PersonaViewer.compact(${compact})`);
+    }
+  }, [compact, status, inject]);
 
   return (
     <View style={[styles.wrap, style]}>

@@ -564,6 +564,30 @@ const api = {
     camera.updateProjectionMatrix();
   },
 
+  /**
+   * Encuadre de cara para avatares pequenos (cabecera del chat).
+   * Acerca la camara al rostro y sube un poco el punto de mira.
+   */
+  compact(on: boolean) {
+    if (!vrm) return;
+    const box = new THREE.Box3().setFromObject(vrm.scene);
+    const size = box.getSize(new THREE.Vector3());
+    const headY = box.max.y;
+    const height = size.y;
+
+    if (on) {
+      // solo la cara: muy cerca, mirando a los ojos
+      const faceY = headY - height * 0.055;
+      camera.position.set(0, faceY + height * 0.004, height * 0.20);
+      camera.lookAt(0, faceY, 0);
+    } else {
+      const focusY = headY - height * 0.16;
+      camera.position.set(0, focusY + height * 0.02, height * 0.62);
+      camera.lookAt(0, focusY, 0);
+    }
+    camera.updateProjectionMatrix();
+  },
+
   isReady() {
     return ready;
   },
