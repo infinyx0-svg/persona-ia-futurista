@@ -1,0 +1,15 @@
+export const theme = {
+  bg: '#F7F8FA',
+  surface: '#FFFFFF',
+  surfaceAlt: '#EFF1F4',
+  border: '#E2E6EB',
+  text: '#1C2530',
+  textMuted: '#6B7684',
+  accent: '#2F6B5E',
+  accentSoft: '#E3EFEA',
+  userBubble: '#2F6B5E',
+  userText: '#FFFFFF',
+  error: '#B3413B',
+  radius: 16,
+  spacing: { xs: 4, s: 8, m: 16, l: 24, xl: 40 },
+} as const;

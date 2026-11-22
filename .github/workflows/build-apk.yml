@@ -3,121 +3,37 @@ name: Build APK
 on:
   workflow_dispatch:
   push:
-    tags:
-      - 'v*'
-
-permissions:
-  contents: write
+    tags: ["v*"]
 
 jobs:
   build:
-    name: Compilar APK
     runs-on: ubuntu-latest
-    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
-
+          node-version: 20
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '17'
-
-      # El runner ubuntu-latest ya trae el SDK de Android completo.
-      # Solo lo localizamos y aceptamos las licencias; si algo falla aqui
-      # no debe tumbar el build, porque Gradle puede descargar lo que falte.
-      - name: Localizar el SDK de Android
-        run: |
-          set -uo pipefail
-          SDK="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-/usr/local/lib/android/sdk}}"
-          if [ ! -d "$SDK" ]; then
-            echo "AVISO: no existe $SDK, se usara el que resuelva Gradle"
-          fi
-          echo "ANDROID_SDK_ROOT=$SDK" >> "$GITHUB_ENV"
-          echo "ANDROID_HOME=$SDK" >> "$GITHUB_ENV"
-          echo "SDK en: $SDK"
-          ls "$SDK" 2>/dev/null || true
-          SDKMGR="$(find "$SDK" -name sdkmanager -type f 2>/dev/null | head -1)"
-          if [ -n "$SDKMGR" ]; then
-            echo "sdkmanager: $SDKMGR"
-            yes | "$SDKMGR" --licenses > /dev/null 2>&1 || true
-          else
-            echo "AVISO: sin sdkmanager, se continua igual"
-          fi
-
-      - name: Dependencias
-        run: npm install --no-audit --no-fund
-
-      - name: Descargar y optimizar el VRM
-        run: |
-          set -euo pipefail
-          pip install --quiet pillow
-          mkdir -p assets/vrm
-          curl -fsSL --retry 3 -o assets/vrm/avatar.vrm \
-            https://raw.githubusercontent.com/madjin/vrm-samples/master/vroid/stable/AvatarSample_A.vrm
-          python3 tools/optimize_vrm.py assets/vrm/avatar.vrm assets/vrm/avatar_opt.vrm
-          ls -lh assets/vrm/
-
-      - name: Compilar el visor 3D
-        run: node viewer/build.mjs
-
-      - name: Comprobar tipos
-        run: npx tsc --noEmit
-
-      - name: Prebuild Android
-        run: npx expo prebuild --clean -p android --no-install
-
-      - name: Compilar APK
-        run: |
-          set -euo pipefail
-          cd android
-          chmod +x gradlew
-          ./gradlew assembleRelease --no-daemon --stacktrace
-
-      - name: Renombrar y verificar
-        run: |
-          set -euo pipefail
-          VERSION="$(node -p "require('./app.json').expo.version")"
-          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
-          mkdir -p dist
-          cp android/app/build/outputs/apk/release/*.apk "dist/persona-ia-${VERSION}.apk"
-          ls -lh dist/
-          echo '--- comprobando el VRM dentro del APK ---'
-          unzip -l "dist/persona-ia-${VERSION}.apk" | grep -i vrm || echo "AVISO: sin VRM"
-          echo '--- comprobando que NO quedan avatares 2D ---'
-          if unzip -l "dist/persona-ia-${VERSION}.apk" | grep -qi vtuber; then
-            echo "ERROR: el APK todavia lleva los avatares 2D"
-            exit 1
-          fi
-          echo "OK: sin avatares 2D"
-
+          java-version: 17
+      - name: Instalar dependencias
+        run: npm install
+      - name: Preparar android
+        run: npx expo prebuild --platform android --no-install
+      - uses: android-actions/setup-android@v3
+      - name: Compilar APK debug
+        run: cd android && ./gradlew assembleDebug
+      - name: Copiar APK
+        run: cp android/app/build/outputs/apk/debug/app-debug.apk persona-ia-v1.apk
       - uses: actions/upload-artifact@v4
         with:
           name: persona-ia-apk
-          path: dist/*.apk
-          if-no-files-found: error
-
-      - name: Publicar Release
+          path: persona-ia-v1.apk
+      - name: Crear release
+        if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || 'apk-latest' }}
-          name: Persona IA ${{ env.VERSION }} - APK Android
-          body: |
-            APK instalable de **Persona IA** (reconstruida desde cero).
-
-            - Version: ${{ env.VERSION }}
-            - Paquete: com.personaia.app
-            - Requisitos: Android 8.0 (API 26) o superior
-
-            Incluye personaje 3D real (VRM) con expresiones, respiracion, parpadeo
-            y movimiento de cabeza; voz realista (ElevenLabs/OpenAI); conversacion
-            con memoria; personalidad que evoluciona; modo celular y modo persona.
-
-            Instalacion: descarga el .apk, activa "Instalar apps de origen
-            desconocido" y abre el archivo en el telefono.
-          files: dist/*.apk
-          draft: false
-          prerelease: false
+          files: persona-ia-v1.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

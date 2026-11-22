@@ -1,30 +1,18 @@
 {
   "expo": {
-    "name": "Persona IA",
-    "slug": "persona-ia",
-    "version": "2.0.1",
+    "name": "Personalidad IA",
+    "slug": "personalidad-ia",
+    "version": "1.0.0",
     "orientation": "portrait",
-    "scheme": "personaia",
-    "userInterfaceStyle": "dark",
-    "newArchEnabled": true,
-    "backgroundColor": "#07060F",
-    "assetBundlePatterns": ["**/*"],
+    "scheme": "personalidadia",
+    "userInterfaceStyle": "light",
+    "backgroundColor": "#F7F8FA",
+    "plugins": [
+      "expo-router"
+    ],
     "android": {
-      "package": "com.personaia.app",
-      "versionCode": 5,
-      "edgeToEdgeEnabled": true,
-      "permissions": ["RECORD_AUDIO", "MODIFY_AUDIO_SETTINGS", "INTERNET"],
-      "adaptiveIcon": { "backgroundColor": "#07060F" }
-    },
-    "ios": {
-      "bundleIdentifier": "com.personaia.app",
-      "supportsTablet": true
-    },
-    "web": { "bundler": "metro", "output": "single" },
-    "plugins": ["expo-audio"],
-    "extra": {
-      "eas": { "projectId": "96caacef-0bd9-4568-89ef-a6d33e56672f" }
-    },
-    "owner": "winterark90"
+      "package": "com.infinyx.personalidadia",
+      "versionCode": 1
+    }
   }
 }

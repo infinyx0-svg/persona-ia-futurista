@@ -1,11 +1,6 @@
 node_modules/
 .expo/
-dist/
 android/
 ios/
+dist/
 *.log
-.DS_Store
-# generado por viewer/build.mjs en cada compilacion
-src/components/viewerHtml.ts
-# el VRM se descarga y optimiza en el workflow
-assets/vrm/*.vrm
